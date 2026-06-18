@@ -47,8 +47,7 @@ export function Select({ value, onChange, children, className = '' }) {
   )
 }
 
-const STAGE_COLOR_SEQ = ['', '#C5DBF6', '#93B8EC', '#5C93DE', '#2E6FCC', '#14479A']
-// 단계별 깔때기 (집계 뷰용)
+// 단계별 깔때기 (집계 뷰) — 거래처별 5색 통일
 export function Funnel({ data, showAmount = true }) {
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
@@ -69,13 +68,11 @@ export function Funnel({ data, showAmount = true }) {
   )
 }
 
-// 카드 안 5단계 진행바
 function StageBar({ stageId }) {
   return (
     <div className="flex gap-1">
       {[1, 2, 3, 4, 5].map((i) => {
         const done = i < stageId
-        const current = i === stageId
         const on = i <= stageId
         return (
           <div key={i} className="flex-1 rounded py-1 text-center text-[11px] font-medium"
@@ -89,12 +86,12 @@ function StageBar({ stageId }) {
 }
 
 const GROUP_BADGE = 'bg-violet-100 text-violet-700'
-// 파이프라인 카드 (거래 1건) — 캡처 스타일
+// 파이프라인 카드 — 모든 카드 동일 높이(제목 2줄·사유 2줄 고정), 날짜·금액 맨 아래
 export function DealCard({ deal }) {
   const overdue = isOverdue(deal)
   const showReason = (deal.status === '보류/연기' || deal.status === '종료(실패)') && deal.note
   return (
-    <Card className="p-4">
+    <Card className="p-4 flex flex-col h-full">
       <div className="flex items-center gap-1.5 mb-2">
         <StatusPill status={deal.status} />
         {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
@@ -109,10 +106,11 @@ export function DealCard({ deal }) {
       <div className="mt-3">
         <StageBar stageId={deal.stage_id} />
       </div>
-      {showReason && (
-        <div className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-stale line-clamp-2 min-h-[2.4rem]">사유: {deal.note}</div>
-      )}
-      <div className="mt-2 flex items-center justify-between">
+      {/* 사유: 항상 2줄 공간 확보, 색은 사유 있을 때만 */}
+      <div className="mt-2 min-h-[2.4rem]">
+        {showReason && <div className="rounded bg-amber-50 px-2 py-1 text-[11px] text-stale line-clamp-2">사유: {deal.note}</div>}
+      </div>
+      <div className="mt-auto pt-1 flex items-center justify-between border-t border-line/60">
         <span className="text-[11px] text-ink-400 tnum">
           {(deal.start_date || '').replaceAll('-', '.')} ~ {(deal.end_date || '').replaceAll('-', '.')}
         </span>

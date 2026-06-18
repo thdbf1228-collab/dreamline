@@ -153,6 +153,14 @@ function RepPanel({ groups }) {
         <button onClick={addRep} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark">담당자 추가</button>
       </div>
 
+      <div className="hidden md:flex items-center gap-2 pb-2 mb-1 text-[11px] font-medium text-ink-400 border-b border-line">
+        <span className="w-9" />
+        <span className="w-16">이름</span>
+        <span className="w-[116px]">그룹</span>
+        <span className="w-52">아이디(이메일)</span>
+        <span>사진</span>
+        <span>비번</span>
+      </div>
       <div className="divide-y divide-line">
         {reps.map((rep) => (
           <div key={rep.id} className="py-3 flex flex-wrap items-center gap-2">
