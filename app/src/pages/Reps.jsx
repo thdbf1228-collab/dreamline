@@ -12,7 +12,7 @@ const SALES = [
   { value: '기업', label: '기업' },
   { value: '글로벌', label: '글로벌' },
 ]
-const STAGE_COLOR = ['', '#C5DBF6', '#93B8EC', '#5C93DE', '#2E6FCC', '#14479A']
+import { STAGE_FILL as STAGE_COLOR } from '../data/aggregate'
 
 export default function Reps() {
   const { rows, error, loading } = useOpportunities()
