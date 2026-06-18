@@ -6,6 +6,7 @@ const NAV = [
   { to: '/groups', label: '그룹별' },
   { to: '/accounts', label: '거래처별' },
   { to: '/reps', label: '담당자별' },
+  { to: '/monthly', label: '월별' },
 ]
 
 export default function Layout({ children }) {

@@ -38,12 +38,11 @@ export default function Overview() {
         <Segment value={sales} onChange={setSales} options={SALES} />
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="전체 건수" value={`${num(k.total)}건`} sub={won(totalAmount)} />
-        <KpiCard label="진행 파이프라인" value={won(k.pipelineAmount)} sub={`${num(k.pipelineCount)}건 진행중`} />
-        <KpiCard label="확정 매출" value={won(k.confirmedAmount)} sub={`${num(k.wonCount)}건 성공`} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KpiCard label="전체 금액" value={won(totalAmount)} sub={`${num(k.total)}건`} />
+        <KpiCard label="진행 파이프라인 금액" value={won(k.pipelineAmount)} sub={`${num(k.pipelineCount)}건 진행중`} />
+        <KpiCard label="확정매출 금액" value={won(k.confirmedAmount)} sub={`${num(k.wonCount)}건 성공`} />
         <KpiCard label="전환율" value={pct(k.winRate, 1)} sub={`성공 ${k.wonCount} / 실패 ${k.lostCount}`} />
-        <KpiCard label="정체 거래" value={`${num(k.staleCount)}건`} sub="진행중·60일+ 무변동" />
       </div>
 
       {/* 진행상태 분포 */}
@@ -74,7 +73,7 @@ export default function Overview() {
           <Funnel data={f} />
         </Card>
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-ink-900 mb-3">정체 거래 (60일+ 무변동)</h2>
+          <h2 className="text-sm font-semibold text-ink-900 mb-3">정체 거래 {`(${num(k.staleCount)}건 · 60일+ 무변동)`}</h2>
           {stale.length === 0 ? (
             <p className="text-sm text-ink-400">정체된 거래가 없습니다.</p>
           ) : (

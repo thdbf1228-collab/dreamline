@@ -1,4 +1,5 @@
 import { won, num, pct } from '../lib/format'
+import { STAGE_SHORT, STAGE_FILL, isOverdue } from '../data/aggregate'
 
 export function Card({ children, className = '' }) {
   return <div className={`bg-paper rounded-xl border border-line shadow-card ${className}`}>{children}</div>
@@ -15,20 +16,39 @@ export function KpiCard({ label, value, sub }) {
 }
 
 const STATUS_STYLE = {
-  '진행중': 'bg-brand-soft text-brand',
-  '종료(성공)': 'bg-emerald-50 text-won',
-  '종료(실패)': 'bg-red-50 text-lost',
-  '보류/연기': 'bg-amber-50 text-stale',
+  '진행중': 'bg-brand text-white',
+  '종료(성공)': 'bg-won text-white',
+  '종료(실패)': 'bg-lost text-white',
+  '보류/연기': 'bg-violet-500 text-white',
 }
-
 export function StatusPill({ status }) {
-  const cls = STATUS_STYLE[status] || 'bg-canvas text-ink-500'
-  return <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-medium ${cls}`}>{status || '-'}</span>
+  return <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[status] || 'bg-ink-400 text-white'}`}>{status || '-'}</span>
 }
 
-const STAGE_COLOR = ['', '#C5DBF6', '#93B8EC', '#5C93DE', '#2E6FCC', '#14479A']
+export function Segment({ value, onChange, options }) {
+  return (
+    <div className="inline-flex rounded-lg border border-line bg-paper p-0.5">
+      {options.map((o) => (
+        <button key={o.value} onClick={() => onChange(o.value)}
+          className={['px-3 py-1.5 text-sm rounded-md transition-colors', value === o.value ? 'bg-brand text-white font-medium' : 'text-ink-500 hover:text-ink-900'].join(' ')}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
 
-// 가로 깔때기. data = [{id,label,count,amount}]
+export function Select({ value, onChange, children, className = '' }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}
+      className={`rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-brand ${className}`}>
+      {children}
+    </select>
+  )
+}
+
+const STAGE_COLOR_SEQ = ['', '#C5DBF6', '#93B8EC', '#5C93DE', '#2E6FCC', '#14479A']
+// 단계별 깔때기 (집계 뷰용)
 export function Funnel({ data, showAmount = true }) {
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
@@ -37,10 +57,8 @@ export function Funnel({ data, showAmount = true }) {
         <div key={d.id} className="flex items-center gap-3">
           <span className="w-16 shrink-0 text-xs text-ink-500">{d.label}</span>
           <div className="flex-1 h-6 rounded bg-canvas overflow-hidden">
-            <div
-              className="h-full rounded flex items-center justify-end pr-2"
-              style={{ width: `${(d.count / max) * 100}%`, background: STAGE_COLOR[d.id], minWidth: d.count ? 28 : 0 }}
-            >
+            <div className="h-full rounded flex items-center justify-end pr-2"
+              style={{ width: `${(d.count / max) * 100}%`, background: STAGE_COLOR_SEQ[d.id], minWidth: d.count ? 28 : 0 }}>
               <span className="text-[11px] font-semibold text-white tnum">{d.count}</span>
             </div>
           </div>
@@ -51,69 +69,58 @@ export function Funnel({ data, showAmount = true }) {
   )
 }
 
-// 세그먼트 토글 (전체/기업/글로벌 등)
-export function Segment({ value, onChange, options }) {
+// 카드 안 5단계 진행바
+function StageBar({ stageId }) {
   return (
-    <div className="inline-flex rounded-lg border border-line bg-paper p-0.5">
-      {options.map((o) => (
-        <button
-          key={o.value}
-          onClick={() => onChange(o.value)}
-          className={[
-            'px-3 py-1.5 text-sm rounded-md transition-colors',
-            value === o.value ? 'bg-brand text-white font-medium' : 'text-ink-500 hover:text-ink-900',
-          ].join(' ')}
-        >
-          {o.label}
-        </button>
-      ))}
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((i) => {
+        const done = i < stageId
+        const current = i === stageId
+        const on = i <= stageId
+        return (
+          <div key={i} className="flex-1 rounded py-1 text-center text-[11px] font-medium"
+            style={{ background: on ? STAGE_FILL[i] : '#EEF0F3', color: on ? '#fff' : '#A4ABB5' }}>
+            {done ? '✓ ' : ''}{STAGE_SHORT[i]}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-export function Select({ value, onChange, children, className = '' }) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-brand ${className}`}
-    >
-      {children}
-    </select>
-  )
-}
-
-const DEAL_BORDER = {
-  '진행중': 'border-l-brand',
-  '종료(성공)': 'border-l-won',
-  '종료(실패)': 'border-l-lost',
-  '보류/연기': 'border-l-stale',
-}
-
-// 파이프라인 카드 (거래 1건)
+const GROUP_BADGE = 'bg-violet-100 text-violet-700'
+// 파이프라인 카드 (거래 1건) — 캡처 스타일
 export function DealCard({ deal }) {
-  const border = DEAL_BORDER[deal.status] || 'border-l-ink-400'
+  const overdue = isOverdue(deal)
+  const showReason = (deal.status === '보류/연기' || deal.status === '종료(실패)') && deal.note
   return (
-    <div className={`bg-paper rounded-lg border border-line border-l-4 ${border} shadow-card p-3`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-ink-900 truncate" title={deal.account_name}>
-            {deal.account_name || '미상'}
-          </div>
-          <div className="text-xs text-ink-500 truncate" title={deal.title}>
-            {deal.title}
-          </div>
-        </div>
-        {deal.is_stale && (
-          <span className="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-stale">정체</span>
-        )}
+    <Card className="p-4">
+      <div className="flex items-center gap-1.5 mb-2">
+        <StatusPill status={deal.status} />
+        {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
+        {overdue && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-rose-100 text-rose-600">기한초과</span>}
+        {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
       </div>
+      <div className="text-sm font-semibold text-ink-900 leading-snug" title={deal.title}>{deal.title}</div>
+      <div className="mt-1 flex items-center justify-between text-xs">
+        <span className="text-ink-500 truncate">{deal.account_name}</span>
+        <span className="text-ink-400 shrink-0 ml-2">{deal.rep_name}</span>
+      </div>
+      <div className="mt-3">
+        <StageBar stageId={deal.stage_id} />
+      </div>
+      {showReason && (
+        <div className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-stale">사유: {deal.note}</div>
+      )}
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-[11px] text-ink-400">
-          {deal.stage_label} · {deal.rep_name}
+        <span className="text-[11px] text-ink-400 tnum">
+          {(deal.start_date || '').replaceAll('-', '.')} ~ {(deal.end_date || '').replaceAll('-', '.')}
         </span>
-        <span className="text-sm font-semibold text-ink-900 tnum">{won(deal.display_amount)}</span>
+        <span className="text-xs text-ink-500">
+          {deal.product ? deal.product + ' ' : ''}
+          <span className="font-semibold text-ink-900 tnum">{won(deal.display_amount)}</span>
+        </span>
       </div>
-    </div>
+    </Card>
   )
 }

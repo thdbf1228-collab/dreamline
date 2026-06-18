@@ -2,26 +2,27 @@ import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
 import { STAGES, STATUSES, filterDeals } from '../data/aggregate'
 import { DealCard, Select } from '../components/ui'
-import { won, num } from '../lib/format'
+import { num } from '../lib/format'
 import { Loading, ErrorBox } from './Overview'
 
-const STAGE_HEAD = ['', '#C5DBF6', '#93B8EC', '#5C93DE', '#2E6FCC', '#14479A']
-const INIT = { salesType: 'all', group: 'all', rep: 'all', status: 'all', q: '' }
+const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status: 'all', q: '' }
 
 export default function Accounts() {
   const { rows, error, loading } = useOpportunities()
   const [f, setF] = useState(INIT)
 
-  const groups = useMemo(
-    () => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].sort(),
-    [rows]
-  )
+  const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].sort(), [rows])
   const reps = useMemo(() => [...new Set((rows || []).map((r) => r.rep_name).filter(Boolean))].sort(), [rows])
-  const filtered = useMemo(() => (rows ? filterDeals(rows, f) : []), [rows, f])
+  const filtered = useMemo(
+    () =>
+      (rows ? filterDeals(rows, f) : []).sort(
+        (a, b) => (a.stage_order - b.stage_order) || (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0)
+      ),
+    [rows, f]
+  )
 
   if (loading) return <Loading />
   if (error) return <ErrorBox msg={error} />
-
   const set = (k) => (v) => setF((p) => ({ ...p, [k]: v }))
 
   return (
@@ -31,72 +32,34 @@ export default function Accounts() {
         <p className="text-sm text-ink-500">{num(filtered.length)}건 / 전체 {num((rows || []).length)}건</p>
       </header>
 
-      {/* 필터 바 */}
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={f.q}
-          onChange={(e) => set('q')(e.target.value)}
-          placeholder="거래처 · 영업기회 · 담당자 검색"
-          className="w-56 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand"
-        />
+        <input value={f.q} onChange={(e) => set('q')(e.target.value)} placeholder="거래처 · 영업기회 · 담당자 검색"
+          className="w-56 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
         <Select value={f.salesType} onChange={set('salesType')}>
-          <option value="all">매출구분 전체</option>
-          <option value="기업">기업</option>
-          <option value="글로벌">글로벌</option>
+          <option value="all">매출구분 전체</option><option value="기업">기업</option><option value="글로벌">글로벌</option>
         </Select>
         <Select value={f.group} onChange={set('group')}>
-          <option value="all">그룹 전체</option>
-          {groups.map((g) => (
-            <option key={g} value={g}>{g}</option>
-          ))}
+          <option value="all">그룹 전체</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}
         </Select>
         <Select value={f.rep} onChange={set('rep')}>
-          <option value="all">담당자 전체</option>
-          {reps.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
+          <option value="all">담당자 전체</option>{reps.map((r) => <option key={r} value={r}>{r}</option>)}
+        </Select>
+        <Select value={f.stage} onChange={set('stage')}>
+          <option value="all">단계 전체</option>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </Select>
         <Select value={f.status} onChange={set('status')}>
-          <option value="all">진행상태 전체</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
+          <option value="all">진행상태 전체</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
         </Select>
-        <button
-          onClick={() => setF(INIT)}
-          className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-500 hover:bg-canvas"
-        >
-          초기화
-        </button>
+        <button onClick={() => setF(INIT)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-500 hover:bg-canvas">초기화</button>
       </div>
 
-      {/* 단계별 컬럼 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        {STAGES.map((s) => {
-          const col = filtered.filter((r) => r.stage_id === s.id)
-          const sum = col.reduce((a, r) => a + (Number(r.display_amount) || 0), 0)
-          return (
-            <div key={s.id} className="flex flex-col">
-              <div className="flex items-center justify-between rounded-t-lg px-3 py-2 text-white" style={{ background: STAGE_HEAD[s.id] }}>
-                <span className="text-sm font-semibold">{s.label}</span>
-                <span className="text-xs tnum">{col.length}</span>
-              </div>
-              <div className="px-2 py-1 text-right text-[11px] text-ink-400 tnum border-x border-line bg-canvas">
-                {won(sum)}
-              </div>
-              <div className="flex-1 space-y-2 p-2 bg-canvas rounded-b-lg border-x border-b border-line max-h-[60vh] overflow-auto">
-                {col.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-ink-400">없음</p>
-                ) : (
-                  col
-                    .sort((a, b) => (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0))
-                    .map((d) => <DealCard key={d.id} deal={d} />)
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {filtered.length === 0 ? (
+        <p className="py-16 text-center text-sm text-ink-400">조건에 맞는 거래가 없습니다.</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {filtered.map((d) => <DealCard key={d.id} deal={d} />)}
+        </div>
+      )}
     </div>
   )
 }

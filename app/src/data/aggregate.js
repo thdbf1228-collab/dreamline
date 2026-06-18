@@ -131,3 +131,26 @@ export function filterDeals(rows, f) {
 }
 
 export const STATUSES = ['진행중', '종료(성공)', '종료(실패)', '보류/연기']
+
+// 기한초과: 진행중인데 종료일이 지남
+export function isOverdue(r) {
+  if (r.status !== '진행중' || !r.end_date) return false
+  return new Date(r.end_date) < new Date(new Date().toISOString().slice(0, 10))
+}
+
+// 월별 집계 (시작일 기준 YYYY-MM)
+export function byMonth(rows) {
+  const m = new Map()
+  for (const r of rows) {
+    const key = (r.start_date || '').slice(0, 7) || '미상'
+    if (!m.has(key)) m.set(key, [])
+    m.get(key).push(r)
+  }
+  return [...m.entries()]
+    .filter(([k]) => k !== '미상')
+    .map(([month, rs]) => ({ month, rows: rs, ...kpis(rs), amount: rs.reduce((a, r) => a + (Number(r.display_amount) || 0), 0) }))
+    .sort((a, b) => a.month.localeCompare(b.month))
+}
+
+export const STAGE_SHORT = ['', '인지', '제안', '견적', '계약', '개통']
+export const STAGE_FILL = ['', '#8B7FD0', '#3BA9C4', '#E89B4B', '#4FA97E', '#2E7D52']

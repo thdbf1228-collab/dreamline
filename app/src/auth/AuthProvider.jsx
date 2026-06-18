@@ -5,26 +5,24 @@ const AuthCtx = createContext(null)
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
-  const [role, setRole] = useState(null)
+  const [profile, setProfile] = useState(null) // {role, must_change_password}
   const [loading, setLoading] = useState(true)
-  const [recovery, setRecovery] = useState(false)
 
-  async function loadRole(uid) {
-    if (!uid) return setRole(null)
-    const { data } = await supabase.from('profiles').select('role').eq('id', uid).single()
-    setRole(data?.role || 'viewer')
+  async function loadProfile(uid) {
+    if (!uid) return setProfile(null)
+    const { data } = await supabase.from('profiles').select('role, must_change_password').eq('id', uid).single()
+    setProfile(data || { role: 'viewer', must_change_password: false })
   }
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session)
-      await loadRole(data.session?.user?.id)
+      await loadProfile(data.session?.user?.id)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
-      loadRole(s?.user?.id)
+      loadProfile(s?.user?.id)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -32,17 +30,19 @@ export function AuthProvider({ children }) {
   const value = {
     session,
     user: session?.user || null,
-    role,
-    isAdmin: role === 'admin',
+    role: profile?.role || null,
+    isAdmin: profile?.role === 'admin',
+    mustChange: !!profile?.must_change_password,
     loading,
-    recovery,
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signOut: () => supabase.auth.signOut(),
-    sendReset: (email) =>
-      supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }),
-    updatePassword: async (password) => {
+    // 본인 비밀번호 변경 + 강제변경 플래그 해제
+    changeOwnPassword: async (password) => {
       const res = await supabase.auth.updateUser({ password })
-      if (!res.error) setRecovery(false)
+      if (!res.error && session?.user?.id) {
+        await supabase.from('profiles').update({ must_change_password: false }).eq('id', session.user.id)
+        await loadProfile(session.user.id)
+      }
       return res
     },
   }
