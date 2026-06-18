@@ -1,93 +1,188 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
-import { byMonth, bySalesType, kpis } from '../data/aggregate'
-import { Card, Segment } from '../components/ui'
-import { won, num, pct } from '../lib/format'
+import { won } from '../lib/format'
+import { Card } from '../components/ui'
 import { Loading, ErrorBox } from './Overview'
 
-const SALES = [
-  { value: 'all', label: '전체' },
-  { value: '기업', label: '기업' },
-  { value: '글로벌', label: '글로벌' },
-]
-const fmtShort = (v) => (v >= 1e8 ? (v / 1e8).toFixed(1) + '억' : Math.round(v / 1e4) + '만')
-const fmtMonth = (m) => `${m.slice(2, 4)}.${m.slice(5, 7)}`
+const monthKey = (r) => (r.start_date || '').slice(0, 7)
+const label = (k) => `${k.slice(0, 4)}년 ${Number(k.slice(5, 7))}월`
+
+function metrics(rows) {
+  const won_ = rows.filter((r) => r.status === '종료(성공)').length
+  const lost = rows.filter((r) => r.status === '종료(실패)').length
+  return {
+    rows,
+    count: rows.length,
+    amount: rows.reduce((a, r) => a + (Number(r.display_amount) || 0), 0),
+    won: won_,
+    lost,
+    winRate: won_ + lost ? (won_ / (won_ + lost)) * 100 : 0,
+  }
+}
+function agg(rows, key) {
+  const m = new Map()
+  for (const r of rows) {
+    const k = r[key] || (key === 'group_name' ? '미배정' : '미상')
+    const e = m.get(k) || { name: k, count: 0, amount: 0 }
+    e.count++; e.amount += Number(r.display_amount) || 0
+    m.set(k, e)
+  }
+  return [...m.values()].sort((a, b) => b.count - a.count || b.amount - a.amount)
+}
 
 export default function Monthly() {
   const { rows, error, loading } = useOpportunities()
-  const [sales, setSales] = useState('all')
-  const frows = useMemo(() => (rows ? bySalesType(rows, sales) : []), [rows, sales])
-  const months = useMemo(() => byMonth(frows), [frows])
+  const keys = useMemo(() => {
+    if (!rows) return []
+    return [...new Set(rows.map(monthKey).filter(Boolean))].sort()
+  }, [rows])
+  const [sel, setSel] = useState('')
+  useEffect(() => { if (keys.length && !sel) setSel(keys[keys.length - 1]) }, [keys])
 
   if (loading) return <Loading />
   if (error) return <ErrorBox msg={error} />
+  if (!keys.length) return <p className="py-16 text-center text-sm text-ink-400">데이터가 없습니다.</p>
 
-  const k = kpis(frows)
-  const amounts = months.map((m) => m.amount)
-  const cum = amounts.reduce((a, v) => [...a, (a[a.length - 1] || 0) + v], [])
-  const avg = months.length ? amounts.reduce((a, b) => a + b, 0) / months.length : 0
+  const idx = keys.indexOf(sel)
+  const cur = metrics((rows || []).filter((r) => monthKey(r) === sel))
+  const prevKey = idx > 0 ? keys[idx - 1] : null
+  const prev = prevKey ? metrics((rows || []).filter((r) => monthKey(r) === prevKey)) : null
 
-  // 주요 성공 거래처 (확정매출 기준 상위)
-  const accMap = new Map()
-  for (const r of frows) {
-    if (r.status !== '종료(성공)') continue
-    const key = r.account_name || '미상'
-    accMap.set(key, (accMap.get(key) || 0) + (Number(r.display_amount) || 0))
-  }
-  const topAcc = [...accMap.entries()].map(([name, amt]) => ({ name, amt })).sort((a, b) => b.amt - a.amt).slice(0, 8)
+  const groups = agg(cur.rows, 'group_name')
+  const topGroup = groups[0]
+  const topGroupReps = topGroup ? agg(cur.rows.filter((r) => (r.group_name || '미배정') === topGroup.name), 'rep_name') : []
+  const topRepOverall = agg(cur.rows, 'rep_name')[0]
+  const wonAcc = agg(cur.rows.filter((r) => r.status === '종료(성공)'), 'account_name')
+  const topAcc = (wonAcc.length ? wonAcc : agg(cur.rows, 'account_name')).slice(0, 6)
+
+  const dCount = prev ? cur.count - prev.count : null
+  const dWin = prev ? cur.winRate - prev.winRate : null
+  const dAmt = prev ? cur.amount - prev.amount : null
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">월별 리포트</h1>
-          <p className="text-sm text-ink-500">시작월 기준 추이</p>
-        </div>
-        <Segment value={sales} onChange={setSales} options={SALES} />
-      </header>
-
-      {/* 상단 스탯 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Stat icon={<IconTrend />} value={won(k.confirmedAmount)} label="누적 확정매출" sub={`성공 ${k.wonCount}건`} />
-        <Stat icon={<IconBar />} value={won(avg)} label="월 평균 금액" sub={`${months.length}개월`} />
-        <Stat icon={<IconTarget />} value={pct(k.winRate, 0)} label="전환율" sub={`성공 ${k.wonCount} / 실패 ${k.lostCount}`} />
+    <div className="space-y-5">
+      {/* 월 선택 */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {keys.map((k) => (
+          <button key={k} onClick={() => setSel(k)}
+            className={['shrink-0 rounded-lg px-3 py-1.5 text-sm transition-colors', k === sel ? 'bg-brand text-white font-medium' : 'bg-paper border border-line text-ink-500 hover:text-ink-900'].join(' ')}>
+            {label(k)}
+          </button>
+        ))}
       </div>
 
-      {/* 월별 금액 (막대) */}
-      <Card className="p-6">
-        <h2 className="text-base font-bold text-ink-900 mb-1">월별 금액</h2>
-        <p className="text-xs text-ink-400 mb-5">매월 신규 거래 금액</p>
-        {months.length === 0 ? <Empty /> : <BarChart months={months} vals={amounts} />}
-      </Card>
+      {/* 신문 헤더 */}
+      <div className="text-center border-y-2 border-ink-900 py-3">
+        <div className="text-[10px] tracking-[0.3em] text-ink-400">DREAMLINE SALES MONTHLY</div>
+        <h1 className="font-serif text-2xl font-bold text-ink-900">영업 월간 리포트</h1>
+        <div className="text-xs text-ink-500">{label(sel)} · 신규 {cur.count}건{prevKey ? ` · 전월 ${label(prevKey)} 대비` : ' · (전월 데이터 없음)'}</div>
+      </div>
 
-      {/* 누적 추이 (라인+영역) */}
+      {/* 헤드라인 */}
+      <h2 className="font-serif text-xl md:text-2xl font-bold text-center text-ink-900 leading-snug">
+        {label(sel)}, 신규 거래 {cur.count}건
+        {dCount != null && <> · 전월 대비 {dCount >= 0 ? '▲' : '▼'}{Math.abs(dCount)}건</>}
+      </h2>
+
+      {/* 리드 기사 (2단) */}
       <Card className="p-6">
-        <div className="flex items-baseline justify-between mb-5">
-          <div>
-            <h2 className="text-base font-bold text-ink-900">누적 추이</h2>
-            <p className="text-xs text-ink-400">월이 지날수록 쌓이는 누적 금액</p>
-          </div>
-          <span className="text-sm text-ink-500">누적 <b className="text-brand tnum">{won(cum[cum.length - 1] || 0)}</b></span>
+        <div className="md:columns-2 md:gap-8 text-[13.5px] text-ink-700 leading-relaxed [&>p]:mb-3 [&>p]:break-inside-avoid">
+          <p>
+            <span className="font-serif font-bold text-ink-900">{label(sel)}</span>에는 신규 거래 <b>{cur.count}건</b>(금액 {won(cur.amount)})이 시작됐다.
+            {prev && (dCount >= 0
+              ? ` 전월 ${prev.count}건보다 ${Math.abs(dCount)}건 늘며 회복세를 보였다.`
+              : ` 전월 ${prev.count}건 대비 ${Math.abs(dCount)}건 줄었다.`)}
+          </p>
+          <p>
+            이 달 전환율은 <b>{cur.winRate.toFixed(0)}%</b>(성공 {cur.won} / 실패 {cur.lost})를 기록했다.
+            {prev && dWin != null && (Math.abs(dWin) < 0.5
+              ? ' 전월과 비슷한 수준이다.'
+              : ` 전월 대비 ${dWin >= 0 ? '+' : ''}${dWin.toFixed(0)}%p ${dWin >= 0 ? '상승' : '하락'}했다.`)}
+          </p>
+          {topGroup && (
+            <p>
+              신규 거래가 가장 많았던 그룹은 <b>{topGroup.name}</b>으로, {topGroup.count}건·{won(topGroup.amount)}를 올렸다.
+              {topGroupReps[0] && ` ${topGroup.name} 안에서는 ${topGroupReps[0].name}가 신규 ${topGroupReps[0].count}건으로 최다 유치자였다.`}
+            </p>
+          )}
+          {topRepOverall && (
+            <p>
+              전체 신규건 최다 담당자는 <b>{topRepOverall.name}</b>({topRepOverall.count}건·{won(topRepOverall.amount)})였다.
+            </p>
+          )}
         </div>
-        {months.length === 0 ? <Empty /> : <AreaChart months={months} cum={cum} />}
       </Card>
 
-      {/* 주요 성공 거래처 (지도 대체) */}
-      <Card className="p-6">
-        <h2 className="text-base font-bold text-ink-900 mb-1">주요 성공 거래처</h2>
-        <p className="text-xs text-ink-400 mb-5">확정매출 상위 거래처</p>
-        {topAcc.length === 0 ? (
-          <p className="py-6 text-center text-sm text-ink-400">성공(확정) 거래가 아직 없습니다.</p>
-        ) : (
-          <div className="space-y-2.5">
+      {/* 스탯 스트립 */}
+      <div className="grid grid-cols-3 gap-4">
+        <StatDelta label="신규 건수" value={`${cur.count}건`} delta={dCount} unit="건" />
+        <StatDelta label="신규 금액" value={won(cur.amount)} delta={dAmt} money />
+        <StatDelta label="전환율" value={`${cur.winRate.toFixed(0)}%`} delta={dWin} unit="%p" round />
+      </div>
+
+      {/* 그룹 동향 + 이 달의 담당자 */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="p-5">
+          <h3 className="font-serif text-base font-bold text-ink-900 mb-3 pb-2 border-b border-ink-900">그룹 동향</h3>
+          {groups.length === 0 ? <p className="text-sm text-ink-400">데이터 없음</p> : (
+            <table className="w-full text-sm">
+              <thead><tr className="text-xs text-ink-400 text-left"><th className="pb-1 font-medium">그룹</th><th className="pb-1 font-medium text-right">신규건</th><th className="pb-1 font-medium text-right">금액</th><th className="pb-1 font-medium text-right">전월대비</th></tr></thead>
+              <tbody>
+                {groups.map((g) => {
+                  const pg = prev ? agg(prev.rows, 'group_name').find((x) => x.name === g.name) : null
+                  const d = pg ? g.count - pg.count : null
+                  return (
+                    <tr key={g.name} className="border-t border-line">
+                      <td className="py-1.5 font-medium text-ink-800">{g.name}</td>
+                      <td className="py-1.5 text-right tnum text-ink-700">{g.count}</td>
+                      <td className="py-1.5 text-right tnum text-ink-500">{won(g.amount)}</td>
+                      <td className={`py-1.5 text-right tnum ${d == null ? 'text-ink-300' : d > 0 ? 'text-won' : d < 0 ? 'text-lost' : 'text-ink-400'}`}>
+                        {d == null ? '–' : d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '0'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </Card>
+
+        <Card className="p-5">
+          <h3 className="font-serif text-base font-bold text-ink-900 mb-3 pb-2 border-b border-ink-900">이 달의 담당자</h3>
+          {!topRepOverall ? <p className="text-sm text-ink-400">데이터 없음</p> : (
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-ink-900">{topRepOverall.name}</span>
+                <span className="text-xs text-ink-400">신규건 최다</span>
+              </div>
+              <p className="mt-1 text-sm text-ink-600">신규 {topRepOverall.count}건 · {won(topRepOverall.amount)}</p>
+              <div className="mt-4 space-y-1.5">
+                {agg(cur.rows, 'rep_name').slice(0, 5).map((r, i) => (
+                  <div key={r.name} className="flex items-center gap-2 text-sm">
+                    <span className="w-4 text-center text-xs font-bold text-ink-300">{i + 1}</span>
+                    <span className="w-16 text-ink-700">{r.name}</span>
+                    <div className="flex-1 h-3.5 rounded-full bg-canvas overflow-hidden">
+                      <div className="h-full rounded-full bg-brand" style={{ width: `${(r.count / agg(cur.rows, 'rep_name')[0].count) * 100}%` }} />
+                    </div>
+                    <span className="w-8 text-right tnum text-ink-500">{r.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* 하단: 이 달 주요 성공 거래처 */}
+      <Card className="p-5">
+        <h3 className="font-serif text-base font-bold text-ink-900 mb-3 pb-2 border-b border-ink-900">이 달 주요 {wonAcc.length ? '성공 ' : ''}거래처</h3>
+        {topAcc.length === 0 ? <p className="text-sm text-ink-400">데이터 없음</p> : (
+          <div className="grid sm:grid-cols-2 gap-x-8 gap-y-2.5">
             {topAcc.map((a, i) => (
               <div key={a.name} className="flex items-center gap-3">
-                <span className="w-5 shrink-0 text-center text-xs font-bold text-ink-300 tnum">{i + 1}</span>
-                <span className="w-28 shrink-0 truncate text-sm font-medium text-ink-700" title={a.name}>{a.name}</span>
-                <div className="flex-1 h-6 rounded-full bg-canvas overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${(a.amt / topAcc[0].amt) * 100}%`, background: 'linear-gradient(90deg,#6366F1,#1D4ED8)' }} />
-                </div>
-                <span className="w-20 shrink-0 text-right text-sm font-semibold text-ink-900 tnum">{won(a.amt)}</span>
+                <span className="w-5 text-center text-xs font-bold text-ink-300 tnum">{i + 1}</span>
+                <span className="flex-1 truncate text-sm font-medium text-ink-700" title={a.name}>{a.name}</span>
+                <span className="text-sm font-semibold text-ink-900 tnum">{won(a.amount)}</span>
               </div>
             ))}
           </div>
@@ -97,85 +192,17 @@ export default function Monthly() {
   )
 }
 
-function Stat({ icon, value, label, sub }) {
+function StatDelta({ label, value, delta, unit, money, round }) {
+  const up = delta != null && delta > 0
+  const down = delta != null && delta < 0
+  const fmtD = money ? won(Math.abs(delta || 0)) : round ? `${Math.abs(delta || 0).toFixed(0)}${unit}` : `${Math.abs(delta || 0)}${unit || ''}`
   return (
-    <Card className="p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-xl bg-indigo-50 text-brand flex items-center justify-center shrink-0">{icon}</div>
-      <div className="min-w-0">
-        <div className="text-2xl font-bold text-ink-900 tnum leading-tight">{value}</div>
-        <div className="text-sm text-ink-700">{label}</div>
-        <div className="text-[11px] text-ink-400">{sub}</div>
+    <Card className="p-4">
+      <div className="text-xs text-ink-500">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-ink-900 tnum">{value}</div>
+      <div className={`mt-0.5 text-xs tnum ${delta == null ? 'text-ink-300' : up ? 'text-won' : down ? 'text-lost' : 'text-ink-400'}`}>
+        {delta == null ? '전월 데이터 없음' : `${up ? '▲' : down ? '▼' : ''} 전월 대비 ${fmtD}`}
       </div>
     </Card>
   )
 }
-
-function BarChart({ months, vals }) {
-  const W = 820, H = 300, padL = 16, padR = 16, padT = 28, padB = 36
-  const plotW = W - padL - padR, plotH = H - padT - padB
-  const n = months.length, slot = plotW / n
-  const max = Math.max(1, ...vals)
-  const barW = Math.min(slot * 0.6, 40)
-  const x = (i) => padL + slot * (i + 0.5)
-  const yTop = (v) => padT + plotH * (1 - v / max)
-  const every = n > 14 ? 2 : 1
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%">
-      <defs>
-        <linearGradient id="barg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#6366F1" /><stop offset="100%" stopColor="#1D4ED8" />
-        </linearGradient>
-      </defs>
-      {[0, 0.5, 1].map((f) => (
-        <line key={f} x1={padL} x2={W - padR} y1={padT + plotH * f} y2={padT + plotH * f} stroke="#EEF0F3" />
-      ))}
-      {months.map((m, i) => {
-        const h = plotH * (vals[i] / max)
-        return (
-          <g key={m.month}>
-            <rect x={x(i) - barW / 2} y={yTop(vals[i])} width={barW} height={Math.max(0, h)} rx="5" fill="url(#barg)" />
-            {vals[i] > 0 && <text x={x(i)} y={yTop(vals[i]) - 6} textAnchor="middle" fontSize="9.5" fill="#64748B">{fmtShort(vals[i])}</text>}
-            {i % every === 0 && <text x={x(i)} y={H - padB + 18} textAnchor="middle" fontSize="10" fill="#94A3B8">{fmtMonth(m.month)}</text>}
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-function AreaChart({ months, cum }) {
-  const W = 820, H = 300, padL = 16, padR = 16, padT = 24, padB = 36
-  const plotW = W - padL - padR, plotH = H - padT - padB
-  const n = months.length, slot = plotW / n
-  const max = Math.max(1, ...cum)
-  const x = (i) => padL + slot * (i + 0.5)
-  const y = (v) => padT + plotH * (1 - v / max)
-  const line = cum.map((v, i) => `${x(i)},${y(v)}`).join(' ')
-  const area = `${padL + slot * 0.5},${padT + plotH} ${line} ${padL + slot * (n - 0.5)},${padT + plotH}`
-  const every = n > 14 ? 2 : 1
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%">
-      <defs>
-        <linearGradient id="areag" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1D4ED8" stopOpacity="0.25" /><stop offset="100%" stopColor="#1D4ED8" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0, 0.5, 1].map((f) => (
-        <line key={f} x1={padL} x2={W - padR} y1={padT + plotH * f} y2={padT + plotH * f} stroke="#EEF0F3" />
-      ))}
-      <polygon points={area} fill="url(#areag)" />
-      <polyline points={line} fill="none" stroke="#1D4ED8" strokeWidth="2.5" strokeLinejoin="round" />
-      {cum.map((v, i) => (
-        <g key={i}>
-          <circle cx={x(i)} cy={y(v)} r="3.5" fill="#fff" stroke="#1D4ED8" strokeWidth="2" />
-          {i % every === 0 && <text x={x(i)} y={H - padB + 18} textAnchor="middle" fontSize="10" fill="#94A3B8">{fmtMonth(months[i].month)}</text>}
-        </g>
-      ))}
-    </svg>
-  )
-}
-
-const Empty = () => <p className="py-10 text-center text-sm text-ink-400">데이터가 없습니다.</p>
-const IconTrend = () => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 17 9 11 13 15 21 7" /><polyline points="15 7 21 7 21 13" /></svg>)
-const IconBar = () => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="6" y1="20" x2="6" y2="13" /><line x1="12" y1="20" x2="12" y2="8" /><line x1="18" y1="20" x2="18" y2="4" /></svg>)
-const IconTarget = () => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /></svg>)
