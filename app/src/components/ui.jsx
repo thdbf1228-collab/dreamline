@@ -58,7 +58,7 @@ export function Funnel({ data, showAmount = true }) {
           <span className="w-16 shrink-0 text-xs text-ink-500">{d.label}</span>
           <div className="flex-1 h-6 rounded bg-canvas overflow-hidden">
             <div className="h-full rounded flex items-center justify-end pr-2"
-              style={{ width: `${(d.count / max) * 100}%`, background: STAGE_COLOR_SEQ[d.id], minWidth: d.count ? 28 : 0 }}>
+              style={{ width: `${(d.count / max) * 100}%`, background: STAGE_FILL[d.id], minWidth: d.count ? 28 : 0 }}>
               <span className="text-[11px] font-semibold text-white tnum">{d.count}</span>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function DealCard({ deal }) {
         {overdue && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-rose-100 text-rose-600">기한초과</span>}
         {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
       </div>
-      <div className="text-sm font-semibold text-ink-900 leading-snug" title={deal.title}>{deal.title}</div>
+      <div className="text-sm font-semibold text-ink-900 leading-snug line-clamp-2 min-h-[2.5rem]" title={deal.title}>{deal.title}</div>
       <div className="mt-1 flex items-center justify-between text-xs">
         <span className="text-ink-500 truncate">{deal.account_name}</span>
         <span className="text-ink-400 shrink-0 ml-2">{deal.rep_name}</span>
@@ -110,7 +110,7 @@ export function DealCard({ deal }) {
         <StageBar stageId={deal.stage_id} />
       </div>
       {showReason && (
-        <div className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-stale">사유: {deal.note}</div>
+        <div className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-stale line-clamp-2 min-h-[2.4rem]">사유: {deal.note}</div>
       )}
       <div className="mt-2 flex items-center justify-between">
         <span className="text-[11px] text-ink-400 tnum">

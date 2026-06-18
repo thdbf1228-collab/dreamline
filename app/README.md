@@ -68,3 +68,21 @@ update public.profiles set role='admin' where email='너계정@dreamline.co.kr';
 2. 설정 → 계정 관리에서 해당 계정 "비번 초기화 요청"(= 강제변경 플래그 ON).
 3. 그 계정 로그인 시 "새 비밀번호 설정" 강제 화면이 뜨고, 1111은 새 비번으로 못 쓰게 막힘. 변경하면 플래그 자동 해제.
 - ※ 비밀번호 원문은 보안상 표기 불가(해시 저장). 앱에서 관리자가 직접 비번을 입력해 리셋하려면 Edge Function 별도 배포 필요.
+
+## v3 업데이트
+**SQL:** `update_auth.sql` 실행 (must_change_password 컬럼).
+
+**비밀번호 1111 초기화 버튼 → Edge Function 배포 필요 (1회):**
+1. Supabase 대시보드 → **Edge Functions** → Create function → 이름 `reset-password`
+2. `supabase/functions/reset-password/index.ts` 내용 전체 붙여넣기 → **Deploy**
+   - (또는 CLI: `supabase functions deploy reset-password`)
+   - 별도 시크릿 설정 불필요 — URL/키가 함수 환경에 자동 주입됨.
+3. 배포되면 담당자 관리의 "비밀번호 변경" 버튼이 그 담당자 아이디(이메일) 계정을 1111로 초기화하고 다음 로그인 시 변경을 강제함. (대상 계정이 Supabase에 먼저 존재해야 함)
+
+**그룹:** 설정 → 그룹 관리에서 1·2·3그룹 추가하면 담당자 드랍다운에 즉시 반영(별도 SQL 불필요).
+
+## v3 변경 요약
+- 담당자 관리: 그룹 상태 공유(드랍다운 즉시 갱신), 그룹 추가/삭제, 담당자 추가(이름/그룹/아이디/사진)·수정·삭제, 아이디(이메일) 표기, 비번 1111 초기화 버튼.
+- 계정 패널(비번 초기화 요청) 제거.
+- 거래처별 카드: 제목 2줄 고정·사유 2줄 clamp로 정렬, 단계바 5색.
+- 모든 파이프라인(깔때기) 색을 거래처별 5색으로 통일.
