@@ -118,8 +118,14 @@ function RepPanel({ groups }) {
     if (error) return setMsg('담당자 추가 실패: ' + error.message)
     const file = newPhoto.current?.files?.[0]
     if (file && data) { const url = await uploadPhoto(data.id, file); if (url) await supabase.from('reps').update({ photo_url: url }).eq('id', data.id) }
+    let acct = ''
+    if (ne.trim()) {
+      const { data: r, error: e2 } = await supabase.functions.invoke('reset-password', { body: { email: ne.trim() } })
+      if (e2) { let d = e2.message; try { const b = await e2.context.json(); if (b?.error) d = b.error } catch {}; acct = ` · 로그인 계정 처리 실패: ${d}` }
+      else acct = ` · ${r?.message || '로그인 계정 준비됨'}`
+    }
     setNn(''); setNg(''); setNe(''); if (newPhoto.current) newPhoto.current.value = ''
-    setMsg(`'${n}' 추가됨`); load()
+    setMsg(`'${n}' 추가됨${acct}`); load()
   }
   async function removeRep(id, name) {
     if (!confirm(`담당자 '${name}' 삭제? (영업기회의 담당자 연결은 해제됩니다)`)) return
@@ -128,17 +134,21 @@ function RepPanel({ groups }) {
   }
   async function resetPw(email) {
     if (!email) return setMsg('먼저 이 담당자의 아이디(이메일)를 입력하세요.')
-    if (!confirm(`'${email}' 비밀번호를 1111로 초기화하고, 다음 로그인 시 변경을 강제합니다.`)) return
+    if (!confirm(`'${email}' 로그인 계정을 비번 1111로 설정합니다.\n(계정이 없으면 새로 생성, 있으면 1111로 초기화 — 다음 로그인 시 변경 강제)`)) return
     setMsg('초기화 중…')
     const { data, error } = await supabase.functions.invoke('reset-password', { body: { email } })
-    if (error) return setMsg('초기화 실패: ' + error.message + " (Edge Function 'reset-password' 배포 필요 — README 참고)")
+    if (error) {
+      let detail = error.message
+      try { const b = await error.context.json(); if (b?.error) detail = b.error } catch {}
+      return setMsg('초기화 실패: ' + detail)
+    }
     setMsg(data?.message || `${email} 비밀번호 1111로 초기화됨`)
   }
 
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">담당자 관리</h2>
-      <p className="text-xs text-ink-400 mb-3">추가 · 그룹배정 · 아이디(이메일) · 사진 · 비번 초기화(1111) · 삭제</p>
+      <p className="text-xs text-ink-400 mb-3">추가 시 이메일 넣으면 로그인 계정 자동 생성(비번 1111). "비번 1111/계정생성"은 계정 없으면 만들고 있으면 초기화.</p>
       {msg && <p className="mb-3 text-xs text-ink-500">{msg}</p>}
 
       {/* 추가 폼: 이름 / 그룹 / 아이디 / 사진 */}
@@ -177,7 +187,7 @@ function RepPanel({ groups }) {
               사진
               <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const url = await uploadPhoto(rep.id, e.target.files?.[0]); if (url) update(rep.id, { photo_url: url }) }} />
             </label>
-            <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비밀번호 변경</button>
+            <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비번 1111/계정생성</button>
             <button onClick={() => removeRep(rep.id, rep.name)} className="ml-auto text-xs text-lost hover:underline">삭제</button>
           </div>
         ))}
