@@ -1,104 +1,40 @@
-import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { useOpportunities } from '../data/useOpportunities'
-import { funnel, hexData, repMetrics } from '../data/aggregate'
-import { Card, KpiCard, Funnel } from '../components/ui'
-import Hexagon from '../components/Hexagon'
-import { won, num, pct } from '../lib/format'
-import { Loading, ErrorBox } from './Overview'
+# 드림라인 영업 파이프라인 대시보드
 
-export default function Reps() {
-  const { rows, error, loading } = useOpportunities()
-  const [reps, setReps] = useState([])
-  const [sel, setSel] = useState('')
+Vite + React + Tailwind + Supabase. 로그인 / 좌측 nav(전체·그룹별·거래처별·담당자별) / 관리자 업로드 / 담당자 관리.
 
-  useEffect(() => {
-    supabase
-      .from('reps')
-      .select('name, photo_url, group_id, groups(name)')
-      .eq('active', true)
-      .order('name')
-      .then(({ data }) => {
-        const list = data || []
-        setReps(list)
-        if (list.length && !sel) setSel(list[0].name)
-      })
-  }, [])
+## 0. 사전: Supabase SQL 실행 순서
+1. `schema_v2.sql` — 테이블·뷰·RLS
+2. `seed_reps.sql` — 그룹 3개 + 담당자 14명
+3. `storage_policy.sql` — 사진용 `rep-photos` 공개 버킷
 
-  const repNames = useMemo(() => reps.map((r) => r.name), [reps])
+검증: `select label from public.pipeline_stages order by sort_order;` → 기회인지/제안/견적/계약/개통완료
 
-  if (loading) return <Loading />
-  if (error) return <ErrorBox msg={error} />
+## 1. 관리자 계정 만들기
+Supabase 대시보드 → Authentication → Users → **Add user** (이메일·비밀번호, auto-confirm).
+그다음 SQL Editor에서:
+```sql
+update public.profiles set role='admin' where email='너계정@dreamline.co.kr';
+```
+(가입하면 트리거가 profiles를 viewer로 자동 생성 → 위 쿼리로 admin 승격)
 
-  const current = reps.find((r) => r.name === sel)
-  const hex = sel && repNames.length ? hexData(rows, repNames, sel) : []
-  const m = sel ? repMetrics(rows, sel) : null
-  const f = sel ? funnel(rows.filter((r) => r.rep_name === sel)) : []
+## 2. 배포 (Vercel)
+1. 이 폴더를 GitHub 새 repo에 업로드 (`node_modules`는 빼고 — `.gitignore`에 이미 있음)
+2. Vercel → New Project → 그 repo import (Framework: Vite 자동감지)
+3. **Environment Variables** 두 개 등록 (Supabase → Settings → API에서 복사):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Deploy
 
-  return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-ink-900">담당자별</h1>
-          <p className="text-sm text-ink-500">육각형은 담당자 전체 대비 상대 위치</p>
-        </div>
-        <select
-          value={sel}
-          onChange={(e) => setSel(e.target.value)}
-          className="w-48 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-brand"
-        >
-          {reps.map((r) => (
-            <option key={r.name} value={r.name}>
-              {r.name}
-              {r.groups?.name ? ` · ${r.groups.name}` : ''}
-            </option>
-          ))}
-        </select>
-      </header>
+로컬 실행 시: `.env.example`을 `.env`로 복사해 같은 값 채우고 `npm install && npm run dev`.
 
-      {!sel ? null : (
-        <div className="grid md:grid-cols-[260px_1fr] gap-4 items-start">
-          {/* 담당자 카드: 사진 + 육각형 */}
-          <Card className="p-5">
-            <div className="flex flex-col items-center">
-              <Avatar url={current?.photo_url} name={sel} />
-              <div className="mt-3 text-base font-bold text-ink-900">{sel}</div>
-              <div className="text-xs text-ink-400">{current?.groups?.name || '미배정'}</div>
-            </div>
-            <div className="mt-5">
-              <Hexagon data={hex} />
-            </div>
-          </Card>
+## 3. 사용
+- 로그인 → 좌측 nav로 이동. **설정·업로드**는 관리자에게만 보임.
+- **설정·업로드**: 영업기회 / 계약 엑셀을 올리면 영업기회ID 기준으로 갱신(upsert).
+  - 영업기회 → 계약 순으로 처리됨. 영업기회에 없는 계약은 자동 제외.
+- **담당자 관리**: 그룹 배정 + 얼굴 사진 업로드.
 
-          {/* 파이프라인 + KPI */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <KpiCard label="진행 파이프라인" value={won(m._k.pipelineAmount)} sub={`${m._k.pipelineCount}건`} />
-              <KpiCard label="확정 매출" value={won(m._k.confirmedAmount)} sub={`${m._k.wonCount}건`} />
-              <KpiCard label="전환율" value={pct(m._k.winRate, 1)} />
-              <KpiCard label="담당 거래처" value={`${m.거래처수}곳`} />
-            </div>
-            <Card className="p-5">
-              <h2 className="text-sm font-semibold text-ink-900 mb-4">단계별 파이프라인</h2>
-              {m._k.total === 0 ? (
-                <p className="text-sm text-ink-400">담당 영업기회가 없습니다.</p>
-              ) : (
-                <Funnel data={f} />
-              )}
-            </Card>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Avatar({ url, name }) {
-  if (url)
-    return <img src={url} alt={name} className="w-24 h-24 rounded-full object-cover border border-line" />
-  return (
-    <div className="w-24 h-24 rounded-full bg-brand-soft flex items-center justify-center text-2xl font-bold text-brand">
-      {name?.slice(-2)}
-    </div>
-  )
-}
+## 동작 규칙 (참고)
+- 표시 금액 = 계약 있으면 공급가액 합산(확정), 없으면 예상매출(추정) — `v_opportunities.display_amount`.
+- 단계: 기회인지 → 제안 → 견적 → 계약 → 개통완료. 진행상태는 별도.
+- 담당자 육각형은 담당자 전체 대비 상대값(min-max, 바닥 보정). 옆 숫자가 실제 절대값.
+- 금액 단위는 원본 파일 기준 '천원' → 화면에선 만/억으로 환산 표기.
