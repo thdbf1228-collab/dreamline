@@ -1,22 +1,35 @@
+import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
-import { byGroup, funnel } from '../data/aggregate'
-import { Card, Funnel } from '../components/ui'
+import { byGroup, funnel, bySalesType } from '../data/aggregate'
+import { Card, Funnel, Segment } from '../components/ui'
 import { won, num, pct } from '../lib/format'
 import { Loading, ErrorBox } from './Overview'
 
+const SALES = [
+  { value: 'all', label: '전체' },
+  { value: '기업', label: '기업' },
+  { value: '글로벌', label: '글로벌' },
+]
+
 export default function Groups() {
   const { rows, error, loading } = useOpportunities()
+  const [sales, setSales] = useState('all')
+  const frows = useMemo(() => (rows ? bySalesType(rows, sales) : []), [rows, sales])
+  const groups = useMemo(() => byGroup(frows), [frows])
+
   if (loading) return <Loading />
   if (error) return <ErrorBox msg={error} />
 
-  const groups = byGroup(rows)
   const maxPipe = Math.max(1, ...groups.map((g) => g.pipelineAmount))
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-xl font-bold text-ink-900">그룹별 비교</h1>
-        <p className="text-sm text-ink-500">{groups.length}개 그룹</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-ink-900">그룹별 비교</h1>
+          <p className="text-sm text-ink-500">{groups.length}개 그룹</p>
+        </div>
+        <Segment value={sales} onChange={setSales} options={SALES} />
       </header>
 
       <Card className="p-5">
@@ -26,10 +39,7 @@ export default function Groups() {
             <div key={g.name} className="flex items-center gap-3">
               <span className="w-16 shrink-0 text-sm font-medium text-ink-700">{g.name}</span>
               <div className="flex-1 h-7 rounded bg-canvas overflow-hidden">
-                <div
-                  className="h-full rounded bg-brand"
-                  style={{ width: `${(g.pipelineAmount / maxPipe) * 100}%`, minWidth: g.pipelineAmount ? 8 : 0 }}
-                />
+                <div className="h-full rounded bg-brand" style={{ width: `${(g.pipelineAmount / maxPipe) * 100}%`, minWidth: g.pipelineAmount ? 8 : 0 }} />
               </div>
               <span className="w-20 shrink-0 text-right text-sm text-ink-700 tnum">{won(g.pipelineAmount)}</span>
             </div>

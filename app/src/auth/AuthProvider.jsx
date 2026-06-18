@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [role, setRole] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [recovery, setRecovery] = useState(false)
 
   async function loadRole(uid) {
     if (!uid) return setRole(null)
@@ -20,7 +21,8 @@ export function AuthProvider({ children }) {
       await loadRole(data.session?.user?.id)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(s)
       loadRole(s?.user?.id)
     })
@@ -33,8 +35,16 @@ export function AuthProvider({ children }) {
     role,
     isAdmin: role === 'admin',
     loading,
+    recovery,
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signOut: () => supabase.auth.signOut(),
+    sendReset: (email) =>
+      supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin }),
+    updatePassword: async (password) => {
+      const res = await supabase.auth.updateUser({ password })
+      if (!res.error) setRecovery(false)
+      return res
+    },
   }
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>
 }

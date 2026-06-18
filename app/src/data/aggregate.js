@@ -107,3 +107,27 @@ export function hexData(rows, repNames, repName) {
     return { axis: ax, value: v, norm }
   })
 }
+
+// 매출구분(기업/글로벌) 필터
+export function bySalesType(rows, t) {
+  return !t || t === 'all' ? rows : rows.filter((r) => r.sales_type === t)
+}
+
+// 파이프라인 뷰용 다중 필터
+export function filterDeals(rows, f) {
+  return rows.filter((r) => {
+    if (f.salesType && f.salesType !== 'all' && r.sales_type !== f.salesType) return false
+    if (f.group && f.group !== 'all' && (r.group_name || '미배정') !== f.group) return false
+    if (f.rep && f.rep !== 'all' && r.rep_name !== f.rep) return false
+    if (f.stage && f.stage !== 'all' && String(r.stage_id) !== String(f.stage)) return false
+    if (f.status && f.status !== 'all' && r.status !== f.status) return false
+    if (f.q) {
+      const q = f.q.trim()
+      if (q && !((r.account_name || '').includes(q) || (r.title || '').includes(q) || (r.rep_name || '').includes(q)))
+        return false
+    }
+    return true
+  })
+}
+
+export const STATUSES = ['진행중', '종료(성공)', '종료(실패)', '보류/연기']
