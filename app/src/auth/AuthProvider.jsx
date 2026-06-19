@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     changeOwnPassword: async (password) => {
       const res = await supabase.auth.updateUser({ password })
       if (!res.error && session?.user?.id) {
-        await supabase.from('profiles').update({ must_change_password: false }).eq('id', session.user.id)
+        await supabase.rpc('clear_must_change')
         await loadProfile(session.user.id)
       }
       return res
