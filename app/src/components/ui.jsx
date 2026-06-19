@@ -54,14 +54,14 @@ export function Funnel({ data, showAmount = true }) {
     <div className="space-y-2">
       {data.map((d) => (
         <div key={d.id} className="flex items-center gap-3">
-          <span className="w-16 shrink-0 text-xs text-ink-500">{d.label}</span>
+          <span className="w-12 sm:w-16 shrink-0 text-xs text-ink-500 truncate">{d.label}</span>
           <div className="flex-1 h-6 rounded bg-canvas overflow-hidden">
             <div className="h-full rounded flex items-center justify-end pr-2"
               style={{ width: `${(d.count / max) * 100}%`, background: STAGE_FILL[d.id], minWidth: d.count ? 28 : 0 }}>
               <span className="text-[11px] font-semibold text-white tnum">{d.count}</span>
             </div>
           </div>
-          {showAmount && <span className="w-20 shrink-0 text-right text-xs text-ink-500 tnum">{won(d.amount)}</span>}
+          {showAmount && <span className="w-14 sm:w-20 shrink-0 text-right text-xs text-ink-500 tnum">{won(d.amount)}</span>}
         </div>
       ))}
     </div>

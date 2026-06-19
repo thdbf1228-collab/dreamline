@@ -96,14 +96,14 @@ function BigFunnel({ data }) {
     <div className="space-y-3">
       {data.map((d) => (
         <div key={d.id} className="flex items-center gap-3">
-          <span className="w-20 shrink-0 text-sm text-ink-500">{d.label}</span>
+          <span className="w-14 sm:w-20 shrink-0 text-sm text-ink-500 truncate">{d.label}</span>
           <div className="flex-1 h-9 rounded-md bg-canvas overflow-hidden">
             <div className="h-full rounded-md flex items-center justify-end pr-3"
               style={{ width: `${(d.count / max) * 100}%`, background: STAGE_COLOR[d.id], minWidth: d.count ? 36 : 0 }}>
               <span className="text-xs font-bold text-white tnum">{d.count}</span>
             </div>
           </div>
-          <span className="w-24 shrink-0 text-right text-sm text-ink-700 tnum">{won(d.amount)}</span>
+          <span className="w-16 sm:w-24 shrink-0 text-right text-sm text-ink-700 tnum">{won(d.amount)}</span>
         </div>
       ))}
     </div>

@@ -12,6 +12,13 @@ body,
   height: 100%;
 }
 
+/* 모바일에서 어떤 요소든 화면 밖으로 못 밀어내게 (가로 스크롤 차단) */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: #f6f7f9;

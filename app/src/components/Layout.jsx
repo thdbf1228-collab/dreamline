@@ -57,7 +57,7 @@ export default function Layout({ children }) {
       </header>
 
       <main className="flex-1 min-w-0 md:overflow-auto">
-        <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8">{children}</div>
+        <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8 overflow-x-hidden">{children}</div>
       </main>
     </div>
   )
