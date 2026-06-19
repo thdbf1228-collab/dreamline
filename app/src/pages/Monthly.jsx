@@ -99,7 +99,7 @@ export default function Monthly() {
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-5">
           <h3 className="text-base font-bold text-ink-900 mb-3 pb-2 border-b border-ink-300">그룹 동향</h3>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm min-w-[320px]">
             <thead><tr className="text-xs text-ink-500 text-left"><th className="pb-1 font-medium">그룹</th><th className="pb-1 font-medium text-right">계약</th><th className="pb-1 font-medium text-right">계약금액</th><th className="pb-1 font-medium text-right">신규</th><th className="pb-1 font-medium text-right">계약 전월비</th></tr></thead>
             <tbody>
               {allGroups.map((g) => {
@@ -118,7 +118,7 @@ export default function Monthly() {
                 )
               })}
             </tbody>
-          </table>
+          </table></div>
         </Card>
 
         <Card className="p-5">

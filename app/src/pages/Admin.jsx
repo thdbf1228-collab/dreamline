@@ -67,6 +67,7 @@ function GroupPanel({ groups, reload }) {
     setMsg(error ? '추가 실패: ' + error.message : `'${n}' 추가됨`); setName(''); reload()
   }
   async function remove(id) {
+    if (!confirm('이 그룹을 삭제할까요? (소속 담당자는 미배정이 됩니다)')) return
     const { error } = await supabase.from('groups').delete().eq('id', id)
     setMsg(error ? '삭제 실패: ' + error.message : '삭제됨'); reload()
   }
@@ -95,6 +96,9 @@ function GroupPanel({ groups, reload }) {
 function RepPanel({ groups }) {
   const [reps, setReps] = useState([]); const [msg, setMsg] = useState('')
   const [running, setRunning] = useState(false)
+  const [leaving, setLeaving] = useState(null)
+  const [transferTo, setTransferTo] = useState('')
+  const [showLeft, setShowLeft] = useState(false)
   const [nn, setNn] = useState(''); const [ng, setNg] = useState(''); const [ne, setNe] = useState('')
   const newPhoto = useRef()
 
@@ -128,10 +132,40 @@ function RepPanel({ groups }) {
     setNn(''); setNg(''); setNe(''); if (newPhoto.current) newPhoto.current.value = ''
     setMsg(`'${n}' 추가됨${acct}`); load()
   }
-  async function removeRep(id, name) {
-    if (!confirm(`담당자 '${name}' 삭제? (영업기회의 담당자 연결은 해제됩니다)`)) return
-    const { error } = await supabase.from('reps').delete().eq('id', id)
-    setMsg(error ? '삭제 실패: ' + error.message : '삭제됨'); load()
+  async function removeRep(rep) {
+    if (!confirm(`담당자 '${rep.name}' 완전 삭제할까요?\n· 담당자 정보 삭제\n· 로그인 계정도 삭제\n(영업기회의 담당자 연결은 해제됩니다. 보통은 '퇴사'를 권장)`)) return
+    if (rep.email) { try { await supabase.functions.invoke('reset-password', { body: { email: rep.email, action: 'delete' } }) } catch {} }
+    const { error } = await supabase.from('reps').delete().eq('id', rep.id)
+    setMsg(error ? '삭제 실패: ' + error.message : `${rep.name} 삭제됨`); load()
+  }
+  async function confirmLeave() {
+    const rep = leaving
+    if (!confirm(`${rep.name} 퇴사 처리할까요?\n· 담당 거래 ${transferTo ? '이관' : '유지'}\n· 담당자별 화면에서 숨김\n· 로그인 차단`)) return
+    let moved = ''
+    if (transferTo) {
+      const t = reps.find((r) => r.id === transferTo)
+      const { error } = await supabase.from('opportunities').update({ rep_id: t.id, group_id: t.group_id || null }).eq('rep_id', rep.id)
+      if (error) return setMsg('거래 이관 실패: ' + error.message)
+      moved = ` · 담당 거래를 ${t.name}에게 이관`
+    }
+    const { error: e2 } = await supabase.from('reps').update({ active: false }).eq('id', rep.id)
+    if (e2) return setMsg('퇴사 처리 실패: ' + e2.message)
+    let lgn = ''
+    if (rep.email) {
+      const { data, error } = await supabase.functions.invoke('reset-password', { body: { email: rep.email, action: 'disable' } })
+      if (error) { let d = error.message; try { const b = await error.context.json(); if (b?.error) d = b.error } catch {}; lgn = ` · 로그인 차단 실패: ${d}` }
+      else lgn = ` · ${data?.message || '로그인 차단'}`
+    }
+    setLeaving(null); setTransferTo(''); setMsg(`${rep.name} 퇴사 처리됨${moved}${lgn}`); load()
+  }
+  async function restore(rep) {
+    await supabase.from('reps').update({ active: true }).eq('id', rep.id)
+    let lgn = ''
+    if (rep.email) {
+      const { data, error } = await supabase.functions.invoke('reset-password', { body: { email: rep.email, action: 'enable' } })
+      if (!error) lgn = ` · ${data?.message || '로그인 차단 해제'}`
+    }
+    setMsg(`${rep.name} 복구됨${lgn}`); load()
   }
   async function resetPw(email) {
     if (!email) return setMsg('먼저 이 담당자의 아이디(이메일)를 입력하세요.')
@@ -146,7 +180,7 @@ function RepPanel({ groups }) {
     setMsg(data?.message || `${email} 비밀번호 111111로 초기화됨`)
   }
   async function provisionAll() {
-    const targets = reps.filter((r) => r.email && r.email.trim())
+    const targets = reps.filter((r) => r.active !== false && r.email && r.email.trim())
     const noEmail = reps.length - targets.length
     if (!targets.length) return setMsg('아이디(이메일)가 채워진 담당자가 없습니다. 먼저 각 담당자 이메일을 입력하세요.')
     if (!confirm(`${targets.length}명의 로그인 계정을 생성/초기화합니다 (비번 111111).${noEmail ? `\n(이메일 없는 ${noEmail}명은 건너뜀)` : ''}`)) return
@@ -194,11 +228,30 @@ function RepPanel({ groups }) {
         <span>사진</span>
         <span>비번</span>
       </div>
+      {leaving && (
+        <div className="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 text-sm">
+          <div className="mb-2"><b>{leaving.name}</b> 퇴사 처리 — 담당 거래를 이관할 대상을 고르세요.</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)} className="rounded-lg border border-line px-2 py-1.5 text-sm">
+              <option value="">이관 안 함 (거래에 퇴사자 이름 유지)</option>
+              {reps.filter((r) => r.active !== false && r.id !== leaving.id).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <button onClick={confirmLeave} className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-600">퇴사 처리</button>
+            <button onClick={() => { setLeaving(null); setTransferTo('') }} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-500">취소</button>
+          </div>
+        </div>
+      )}
+      <label className="flex items-center gap-2 mb-2 text-xs text-ink-500 cursor-pointer select-none">
+        <input type="checkbox" checked={showLeft} onChange={(e) => setShowLeft(e.target.checked)} className="w-3.5 h-3.5 accent-brand" /> 퇴사자 포함 보기
+      </label>
       <div className="divide-y divide-line">
-        {reps.map((rep) => (
-          <div key={rep.id} className="py-3 flex flex-wrap items-center gap-2">
+        {[...reps].filter((r) => showLeft || r.active !== false).sort((a, b) => (a.active === false) - (b.active === false) || a.name.localeCompare(b.name)).map((rep) => {
+          const left = rep.active === false
+          return (
+          <div key={rep.id} className={`py-3 flex flex-wrap items-center gap-2 ${left ? 'opacity-50' : ''}`}>
             <Thumb url={rep.photo_url} name={rep.name} />
             <span className="w-16 text-sm font-medium text-ink-900">{rep.name}</span>
+            {left && <span className="rounded bg-canvas border border-line px-1.5 py-0.5 text-[11px] text-ink-500">퇴사</span>}
             <select value={rep.group_id || ''} onChange={(e) => update(rep.id, { group_id: e.target.value || null })} className="rounded-lg border border-line px-2 py-1.5 text-sm focus:border-brand">
               <option value="">미배정</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -206,14 +259,18 @@ function RepPanel({ groups }) {
             <input type="email" defaultValue={rep.email || ''} placeholder="아이디 (이메일)"
               onBlur={(e) => { const v = e.target.value.trim(); if (v !== (rep.email || '')) update(rep.id, { email: v || null }) }}
               className="w-52 rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand" />
-            <label className="text-xs text-brand cursor-pointer hover:underline">
-              사진
-              <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const url = await uploadPhoto(rep.id, e.target.files?.[0]); if (url) update(rep.id, { photo_url: url }) }} />
-            </label>
-            <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비번 111111/계정생성</button>
-            <button onClick={() => removeRep(rep.id, rep.name)} className="ml-auto text-xs text-lost hover:underline">삭제</button>
+            {!left && (
+              <label className="text-xs text-brand cursor-pointer hover:underline">사진
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const url = await uploadPhoto(rep.id, e.target.files?.[0]); if (url) update(rep.id, { photo_url: url }) }} />
+              </label>
+            )}
+            {!left && <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비번 111111/계정생성</button>}
+            {left
+              ? <button onClick={() => restore(rep)} className="ml-auto text-xs text-brand hover:underline">복구</button>
+              : <button onClick={() => { setLeaving(rep); setTransferTo('') }} className="ml-auto text-xs text-stale hover:underline">퇴사</button>}
+            <button onClick={() => removeRep(rep)} className="text-xs text-lost hover:underline">삭제</button>
           </div>
-        ))}
+        )})}
       </div>
     </Card>
   )
