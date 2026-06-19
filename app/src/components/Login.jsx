@@ -1,9 +1,14 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 
+const KEY = 'dl_saved_id'
+const getSaved = () => { try { return localStorage.getItem(KEY) || '' } catch { return '' } }
+
 export default function Login() {
   const { signIn } = useAuth()
-  const [email, setEmail] = useState('')
+  const saved = getSaved()
+  const [email, setEmail] = useState(saved)
+  const [remember, setRemember] = useState(!!saved)
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -12,9 +17,11 @@ export default function Login() {
     e.preventDefault()
     setErr('')
     setBusy(true)
-    const { error } = await signIn(email.trim(), pw)
+    const id = email.trim()
+    const { error } = await signIn(id, pw)
     setBusy(false)
-    if (error) setErr('로그인 실패 — 아이디 또는 비밀번호를 확인하세요.')
+    if (error) { setErr('로그인 실패 — 아이디 또는 비밀번호를 확인하세요.'); return }
+    try { remember ? localStorage.setItem(KEY, id) : localStorage.removeItem(KEY) } catch {}
   }
 
   return (
@@ -34,6 +41,10 @@ export default function Login() {
             <label className="block text-xs font-medium text-ink-700 mb-1">비밀번호</label>
             <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand" />
           </div>
+          <label className="flex items-center gap-2 text-sm text-ink-700 cursor-pointer select-none">
+            <input type="checkbox" checked={remember} onChange={(e) => { setRemember(e.target.checked); if (!e.target.checked) { try { localStorage.removeItem(KEY) } catch {} } }} className="w-4 h-4 accent-brand" />
+            아이디 저장
+          </label>
           {err && <p className="text-sm text-lost">{err}</p>}
           <button type="submit" disabled={busy} className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
             {busy ? '로그인 중…' : '로그인'}
