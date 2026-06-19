@@ -94,6 +94,7 @@ function GroupPanel({ groups, reload }) {
 
 function RepPanel({ groups }) {
   const [reps, setReps] = useState([]); const [msg, setMsg] = useState('')
+  const [running, setRunning] = useState(false)
   const [nn, setNn] = useState(''); const [ng, setNg] = useState(''); const [ne, setNe] = useState('')
   const newPhoto = useRef()
 
@@ -144,12 +145,34 @@ function RepPanel({ groups }) {
     }
     setMsg(data?.message || `${email} 비밀번호 111111로 초기화됨`)
   }
+  async function provisionAll() {
+    const targets = reps.filter((r) => r.email && r.email.trim())
+    const noEmail = reps.length - targets.length
+    if (!targets.length) return setMsg('아이디(이메일)가 채워진 담당자가 없습니다. 먼저 각 담당자 이메일을 입력하세요.')
+    if (!confirm(`${targets.length}명의 로그인 계정을 생성/초기화합니다 (비번 111111).${noEmail ? `\n(이메일 없는 ${noEmail}명은 건너뜀)` : ''}`)) return
+    setRunning(true); setMsg('전체 처리 중… 0/' + targets.length)
+    let ok = 0; const fails = []
+    for (let i = 0; i < targets.length; i++) {
+      const r = targets[i]
+      const { data, error } = await supabase.functions.invoke('reset-password', { body: { email: r.email.trim() } })
+      if (error) { let d = error.message; try { const b = await error.context.json(); if (b?.error) d = b.error } catch {}; fails.push(`${r.name}(${r.email}): ${d}`) }
+      else ok++
+      setMsg(`전체 처리 중… ${i + 1}/${targets.length}`)
+    }
+    setRunning(false)
+    setMsg(`완료 — 성공 ${ok}명${noEmail ? `, 이메일없음 ${noEmail}명 제외` : ''}${fails.length ? `, 실패 ${fails.length}명:\n· ` + fails.join('\n· ') : ''}`)
+  }
 
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">담당자 관리</h2>
-      <p className="text-xs text-ink-400 mb-3">추가 시 이메일 넣으면 로그인 계정 자동 생성(비번 111111). "비번 111111/계정생성"은 계정 없으면 만들고 있으면 초기화.</p>
-      {msg && <p className="mb-3 text-xs text-ink-500">{msg}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <p className="text-xs text-ink-400">추가 시 이메일 넣으면 로그인 계정 자동 생성(비번 111111). "비번 111111/계정생성"은 계정 없으면 만들고 있으면 초기화.</p>
+        <button onClick={provisionAll} disabled={running} className="shrink-0 rounded-lg border border-brand px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand-soft disabled:opacity-50">
+          {running ? '처리 중…' : '전체 계정 생성/동기화'}
+        </button>
+      </div>
+      {msg && <p className="mb-3 text-xs text-ink-500 whitespace-pre-line">{msg}</p>}
 
       {/* 추가 폼: 이름 / 그룹 / 아이디 / 사진 */}
       <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg bg-canvas">
