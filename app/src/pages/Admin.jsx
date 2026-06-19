@@ -134,7 +134,7 @@ function RepPanel({ groups }) {
   }
   async function resetPw(email) {
     if (!email) return setMsg('먼저 이 담당자의 아이디(이메일)를 입력하세요.')
-    if (!confirm(`'${email}' 로그인 계정을 비번 1111로 설정합니다.\n(계정이 없으면 새로 생성, 있으면 1111로 초기화 — 다음 로그인 시 변경 강제)`)) return
+    if (!confirm(`'${email}' 로그인 계정을 비번 111111로 설정합니다.\n(계정이 없으면 새로 생성, 있으면 111111로 초기화 — 다음 로그인 시 변경 강제)`)) return
     setMsg('초기화 중…')
     const { data, error } = await supabase.functions.invoke('reset-password', { body: { email } })
     if (error) {
@@ -142,13 +142,13 @@ function RepPanel({ groups }) {
       try { const b = await error.context.json(); if (b?.error) detail = b.error } catch {}
       return setMsg('초기화 실패: ' + detail)
     }
-    setMsg(data?.message || `${email} 비밀번호 1111로 초기화됨`)
+    setMsg(data?.message || `${email} 비밀번호 111111로 초기화됨`)
   }
 
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">담당자 관리</h2>
-      <p className="text-xs text-ink-400 mb-3">추가 시 이메일 넣으면 로그인 계정 자동 생성(비번 1111). "비번 1111/계정생성"은 계정 없으면 만들고 있으면 초기화.</p>
+      <p className="text-xs text-ink-400 mb-3">추가 시 이메일 넣으면 로그인 계정 자동 생성(비번 111111). "비번 111111/계정생성"은 계정 없으면 만들고 있으면 초기화.</p>
       {msg && <p className="mb-3 text-xs text-ink-500">{msg}</p>}
 
       {/* 추가 폼: 이름 / 그룹 / 아이디 / 사진 */}
@@ -187,7 +187,7 @@ function RepPanel({ groups }) {
               사진
               <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const url = await uploadPhoto(rep.id, e.target.files?.[0]); if (url) update(rep.id, { photo_url: url }) }} />
             </label>
-            <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비번 1111/계정생성</button>
+            <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비번 111111/계정생성</button>
             <button onClick={() => removeRep(rep.id, rep.name)} className="ml-auto text-xs text-lost hover:underline">삭제</button>
           </div>
         ))}

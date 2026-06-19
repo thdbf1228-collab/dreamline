@@ -11,7 +11,7 @@ export default function ForcedPasswordChange() {
   async function submit(e) {
     e.preventDefault()
     setMsg('')
-    if (pw === '1111') return setMsg('초기 비밀번호(1111)는 사용할 수 없습니다. 다른 비밀번호로 설정하세요.')
+    if (pw === '111111') return setMsg('초기 비밀번호(111111)는 사용할 수 없습니다. 다른 비밀번호로 설정하세요.')
     if (pw.length < 6) return setMsg('비밀번호는 6자 이상이어야 합니다.')
     if (pw !== pw2) return setMsg('비밀번호가 일치하지 않습니다.')
     setBusy(true)
