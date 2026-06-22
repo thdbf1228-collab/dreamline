@@ -20,7 +20,7 @@ export function KpiCard({ label, value, sub }) {
 
 const STATUS_STYLE = {
   '진행중': 'bg-brand text-white',
-  '종료(성공)': 'bg-won text-white',
+  '종료(성공)': 'bg-[#2F5597] text-white',
   '종료(실패)': 'bg-lost text-white',
   '보류/연기': 'bg-violet-500 text-white',
 }
@@ -88,7 +88,7 @@ function StageBar({ stageId }) {
   )
 }
 
-const GROUP_BADGE = 'bg-violet-100 text-violet-700'
+const GROUP_BADGE = 'text-ink-900 font-bold'
 // 파이프라인 카드 — 모든 카드 동일 높이(제목 2줄·사유 2줄 고정), 날짜·금액 맨 아래
 export function DealCard({ deal }) {
   const { isAdmin } = useAuth()
@@ -112,7 +112,7 @@ export function DealCard({ deal }) {
         <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
           className="mb-2 w-full rounded-md border border-dashed border-line bg-canvas px-2 py-1 text-xs text-ink-800 focus:border-brand focus:bg-paper" />
       ) : (deal.admin_memo ? (
-        <div className="mb-2 rounded-md bg-brand-soft px-2 py-1 text-xs font-semibold text-brand">{deal.admin_memo}</div>
+        <div className="mb-2 rounded-md px-2 py-1 text-xs font-bold memo-flash">{deal.admin_memo}</div>
       ) : null)}
       <div className="text-sm font-semibold text-ink-900 leading-snug line-clamp-2 min-h-[2.5rem]" title={deal.title}>{deal.title}</div>
       <div className="mt-1 flex items-center justify-between text-xs">

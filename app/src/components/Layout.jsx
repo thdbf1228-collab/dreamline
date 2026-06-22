@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 
 const NAV = [
   { to: '/', label: '전체', end: true },
-  { to: '/accounts', label: '파이프라인 현황' },
+  { to: '/accounts', label: '파이프라인' },
   { to: '/contracts', label: '계약' },
   { to: '/activity', label: '활동' },
 ]
@@ -23,30 +23,28 @@ export default function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-canvas md:flex">
-      <aside className="hidden md:flex w-56 shrink-0 border-r border-line bg-paper flex-col">
-        <div className="px-5 py-5 border-b border-line">
+      {/* 데스크톱 사이드바 — 고정(스크롤 무관) */}
+      <aside className="hidden md:flex w-56 shrink-0 border-r border-line bg-paper flex-col md:sticky md:top-0 md:h-screen">
+        <div className="px-5 py-4 border-b border-line">
           <div className="text-[11px] font-semibold tracking-widest text-brand">DREAMLINE</div>
           <div className="text-sm font-bold text-ink-900">영업 파이프라인</div>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+        {session && (
+          <div className="px-3 py-3 border-b border-line">
+            <div className="px-1 text-xs text-ink-400 truncate mb-1">{session.user?.email}</div>
+            <button onClick={logout} className="w-full rounded-lg border border-line px-3 py-1.5 text-sm text-ink-700 hover:bg-canvas">로그아웃</button>
+          </div>
+        )}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>{n.label}</NavLink>)}
           {isAdmin && (<>
             <div className="pt-3 mt-2 border-t border-line" />
             <NavLink to="/admin" className={sideClass}>관리자</NavLink>
           </>)}
         </nav>
-        <div className="p-3 border-t border-line">
-          {session ? (
-            <>
-              <div className="px-3 py-1 text-xs text-ink-400 truncate">{session.user?.email}</div>
-              <button onClick={logout} className="mt-1 w-full rounded-lg border border-line px-3 py-2 text-sm text-ink-700 hover:bg-canvas">로그아웃</button>
-            </>
-          ) : (
-            <div className="px-3 py-1 text-[11px] text-ink-300">열람은 로그인 없이 가능</div>
-          )}
-        </div>
       </aside>
 
+      {/* 모바일 상단바 */}
       <header className="md:hidden sticky top-0 z-20 bg-paper border-b border-line">
         <div className="flex items-center justify-between px-4 py-3">
           <div>
@@ -60,7 +58,7 @@ export default function Layout({ children }) {
         </nav>
       </header>
 
-      <main className="flex-1 min-w-0 md:overflow-auto">
+      <main className="flex-1 min-w-0">
         <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8 overflow-x-hidden">{children}</div>
       </main>
     </div>

@@ -1,42 +1,37 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
-import { weekStart } from '../data/aggregate'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
 
 const mLabel = (k) => `${k.slice(0, 4)}.${k.slice(5, 7)}`
-const wLabel = (k) => `${k.slice(5, 7)}.${k.slice(8, 10)}`
 
-// 영업사원 × 기간 매트릭스 (미배정=타부서 발령자 제외, 합계순 정렬)
-function repMatrix(rows, keyFn, limit) {
-  const filtered = rows.filter((r) => r.group_name && r.rep_name)
-  let periods = [...new Set(filtered.map(keyFn).filter(Boolean))].sort()
-  if (limit) periods = periods.slice(-limit)
+// 영업사원 × 월 매트릭스 (미배정 제외, 합계순)
+function matrix(rows, dateField, year) {
+  const filtered = rows.filter((r) => r.group_name && r.rep_name && (year === 'all' || (r[dateField] || '').slice(0, 4) === year))
+  const periods = [...new Set(filtered.map((r) => (r[dateField] || '').slice(0, 7)).filter(Boolean))].sort()
   const pset = new Set(periods)
   const map = new Map()
   for (const r of filtered) {
-    const p = keyFn(r); if (!pset.has(p)) continue
+    const p = (r[dateField] || '').slice(0, 7); if (!pset.has(p)) continue
     if (!map.has(r.rep_name)) map.set(r.rep_name, {})
     const o = map.get(r.rep_name); o[p] = (o[p] || 0) + 1
   }
-  const reps = [...map.entries()]
-    .map(([rep, by]) => ({ rep, by, total: Object.values(by).reduce((s, n) => s + n, 0) }))
-    .sort((a, b) => b.total - a.total)
+  const reps = [...map.entries()].map(([rep, by]) => ({ rep, by, total: Object.values(by).reduce((s, n) => s + n, 0) })).sort((a, b) => b.total - a.total)
   const colTotals = periods.map((p) => reps.reduce((s, r) => s + (r.by[p] || 0), 0))
-  const grand = colTotals.reduce((s, n) => s + n, 0)
-  return { periods, reps, colTotals, grand }
+  return { periods, reps, colTotals, grand: colTotals.reduce((s, n) => s + n, 0) }
 }
 
-function RepMatrix({ m, label }) {
+function RepMatrix({ m }) {
   if (!m.reps.length) return <p className="px-5 pb-5 text-sm text-ink-400">데이터 없음</p>
   const cell = (n) => (n ? <span className="text-ink-800 tnum">{n}</span> : <span className="text-ink-300">·</span>)
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm min-w-[480px]">
+      <table className="w-full text-sm min-w-[460px]">
         <thead>
           <tr className="bg-canvas text-xs text-ink-500">
             <th className="px-4 py-2 text-left font-medium whitespace-nowrap">영업사원</th>
-            {m.periods.map((p) => <th key={p} className="px-2 py-2 text-right font-medium tnum whitespace-nowrap">{label(p)}</th>)}
+            {m.periods.map((p) => <th key={p} className="px-2 py-2 text-right font-medium tnum whitespace-nowrap">{mLabel(p)}</th>)}
             <th className="px-4 py-2 text-right font-medium">합계</th>
           </tr>
         </thead>
@@ -60,25 +55,41 @@ function RepMatrix({ m, label }) {
 }
 
 export default function Activity() {
-  const { rows } = useActivities()
-  const byMonth = useMemo(() => repMatrix(rows, (r) => (r.activity_date || '').slice(0, 7)), [rows])
-  const byWeek = useMemo(() => repMatrix(rows, (r) => weekStart(r.activity_date), 12), [rows])
+  const { rows: opps } = useOpportunities()
+  const { rows: acts } = useActivities()
+  const [year, setYear] = useState('all')
+
+  const years = useMemo(() => {
+    const s = new Set()
+    for (const r of opps || []) if (r.start_date) s.add(r.start_date.slice(0, 4))
+    for (const a of acts) if (a.activity_date) s.add(a.activity_date.slice(0, 4))
+    return [...s].sort().reverse()
+  }, [opps, acts])
+
+  const oppM = useMemo(() => matrix(opps || [], 'start_date', year), [opps, year])
+  const actM = useMemo(() => matrix(acts, 'activity_date', year), [acts, year])
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-xl font-bold text-ink-900">영업사원별 활동</h1>
-        <p className="text-sm text-ink-500">활동일시 기준 · 총 {num(rows.length)}건 · 합계순</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-ink-900">영업사원별 현황</h1>
+          <p className="text-sm text-ink-500">월별 · 합계순 · 미배정 제외</p>
+        </div>
+        <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
+          <option value="all">전체 (년도)</option>
+          {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+        </select>
       </header>
 
       <Card className="overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-base font-bold text-ink-900">영업사원별 월간 활동</div>
-        <RepMatrix m={byMonth} label={mLabel} />
+        <div className="px-4 pt-4 pb-2 text-base font-bold text-ink-900">영업사원별 영업기회 <span className="text-xs font-normal text-ink-400">(시작일 기준)</span></div>
+        <RepMatrix m={oppM} />
       </Card>
 
       <Card className="overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-base font-bold text-ink-900">영업사원별 주간 활동 <span className="text-xs font-normal text-ink-400">(최근 12주)</span></div>
-        <RepMatrix m={byWeek} label={wLabel} />
+        <div className="px-4 pt-4 pb-2 text-base font-bold text-ink-900">영업사원별 영업활동 <span className="text-xs font-normal text-ink-400">(활동일시 기준)</span></div>
+        <RepMatrix m={actM} />
       </Card>
     </div>
   )

@@ -103,7 +103,7 @@ function RepPanel({ groups }) {
   const [nn, setNn] = useState(''); const [ng, setNg] = useState(''); const [ne, setNe] = useState('')
   const newPhoto = useRef()
 
-  const load = () => supabase.from('reps').select('id,name,group_id,email,photo_url,active').order('name').then(({ data }) => setReps(data || []))
+  const load = () => supabase.from('reps').select('id,name,group_id,email,photo_url,active,excluded').order('name').then(({ data }) => setReps(data || []))
   useEffect(() => { load() }, [])
 
   async function update(id, patch) {
@@ -167,6 +167,12 @@ function RepPanel({ groups }) {
       if (!error) lgn = ` · ${data?.message || '로그인 차단 해제'}`
     }
     setMsg(`${rep.name} 복구됨${lgn}`); load()
+  }
+  async function toggleExclude(rep) {
+    const next = !rep.excluded
+    if (next && !confirm(`${rep.name} 카운팅 제외할까요?\n전체·파이프라인·계약·활동 모든 화면 집계에서 빠집니다. (다시 살리기 가능)`)) return
+    const { error } = await supabase.from('reps').update({ excluded: next }).eq('id', rep.id)
+    setMsg(error ? '실패: ' + error.message : `${rep.name} ${next ? '카운팅 제외됨' : '카운팅 복구됨'}`); load()
   }
   async function resetPw(email) {
     if (!email) return setMsg('먼저 이 담당자의 아이디(이메일)를 입력하세요.')
@@ -253,6 +259,7 @@ function RepPanel({ groups }) {
             <Thumb url={rep.photo_url} name={rep.name} />
             <span className="w-16 text-sm font-medium text-ink-900">{rep.name}</span>
             {left && <span className="rounded bg-canvas border border-line px-1.5 py-0.5 text-[11px] text-ink-500">퇴사</span>}
+            {rep.excluded && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-stale">집계제외</span>}
             <select value={rep.group_id || ''} onChange={(e) => update(rep.id, { group_id: e.target.value || null })} className="rounded-lg border border-line px-2 py-1.5 text-sm focus:border-brand">
               <option value="">미배정</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -269,6 +276,7 @@ function RepPanel({ groups }) {
             {left
               ? <button onClick={() => restore(rep)} className="ml-auto text-xs text-brand hover:underline">복구</button>
               : <button onClick={() => { setLeaving(rep); setTransferTo('') }} className="ml-auto text-xs text-stale hover:underline">퇴사</button>}
+            <button onClick={() => toggleExclude(rep)} className={`text-xs hover:underline ${rep.excluded ? 'text-brand' : 'text-ink-400'}`}>{rep.excluded ? '집계복구' : '카운팅제외'}</button>
             <button onClick={() => removeRep(rep)} className="text-xs text-lost hover:underline">삭제</button>
           </div>
         )})}

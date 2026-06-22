@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useContracts } from '../data/useContracts'
-import { Card } from '../components/ui'
+import { Card, Select } from '../components/ui'
 import { won, num } from '../lib/format'
 import { Loading } from './Overview'
 
@@ -9,42 +9,50 @@ const monthLabel = (k) => `${k.slice(0, 4)}년 ${Number(k.slice(5, 7))}월`
 
 export default function Contracts() {
   const { rows } = useContracts()
+  const [year, setYear] = useState('all')
+  const [mon, setMon] = useState('all')
+  const [grp, setGrp] = useState('all')
 
-  const valid = useMemo(() => rows.filter((c) => c.contract_date && c.contract_date >= FROM), [rows])
-  // 거래처 열 고정폭 = 가장 긴 거래처명 기준(한글 1em, 6~16em 캡)
-  const accEm = useMemo(() => {
-    const maxLen = Math.max(6, ...valid.map((c) => (c.account_name || '').length))
-    return Math.min(16, maxLen) + 1
-  }, [valid])
+  const base = useMemo(() => rows.filter((c) => c.contract_date && c.contract_date >= FROM), [rows])
+  const years = useMemo(() => [...new Set(base.map((c) => c.contract_date.slice(0, 4)))].sort().reverse(), [base])
+  const groups = useMemo(() => [...new Set(base.map((c) => c.group_name).filter(Boolean))].sort(), [base])
+
+  const valid = useMemo(() => base.filter((c) =>
+    (year === 'all' || c.contract_date.slice(0, 4) === year) &&
+    (mon === 'all' || c.contract_date.slice(5, 7) === mon) &&
+    (grp === 'all' || c.group_name === grp)
+  ), [base, year, mon, grp])
+
+  const accEm = useMemo(() => Math.min(16, Math.max(6, ...valid.map((c) => (c.account_name || '').length))) + 1, [valid])
 
   const months = useMemo(() => {
     const m = new Map()
-    for (const c of valid) {
-      const k = c.contract_date.slice(0, 7)
-      if (!m.has(k)) m.set(k, [])
-      m.get(k).push(c)
-    }
-    return [...m.entries()]
-      .map(([month, list]) => ({
-        month,
-        list: list.sort((a, b) => (Number(b.supply_amount) || 0) - (Number(a.supply_amount) || 0)),
-        sum: list.reduce((s, c) => s + (Number(c.supply_amount) || 0), 0),
-      }))
-      .sort((a, b) => b.month.localeCompare(a.month))
+    for (const c of valid) { const k = c.contract_date.slice(0, 7); if (!m.has(k)) m.set(k, []); m.get(k).push(c) }
+    return [...m.entries()].map(([month, list]) => ({
+      month,
+      list: list.sort((a, b) => (Number(b.supply_amount) || 0) - (Number(a.supply_amount) || 0)),
+      sum: list.reduce((s, c) => s + (Number(c.supply_amount) || 0), 0),
+    })).sort((a, b) => b.month.localeCompare(a.month))
   }, [valid])
 
   if (rows === null) return <Loading />
-  const totalCnt = valid.length
 
   return (
     <div className="space-y-5">
       <header>
         <h1 className="text-xl font-bold text-ink-900">계약</h1>
-        <p className="text-sm text-ink-500">계약일 {FROM.replaceAll('-', '.')} 이후 · {num(totalCnt)}건 · 월별 · 금액순</p>
+        <p className="text-sm text-ink-500">계약일 {FROM.replaceAll('-', '.')} 이후 · {num(valid.length)}건 · 금액순</p>
       </header>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={year} onChange={setYear}><option value="all">년도 전체</option>{years.map((y) => <option key={y} value={y}>{y}년</option>)}</Select>
+        <Select value={mon} onChange={setMon}><option value="all">월 전체</option>{Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((m) => <option key={m} value={m}>{Number(m)}월</option>)}</Select>
+        <Select value={grp} onChange={setGrp}><option value="all">그룹 전체</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}</Select>
+        <button onClick={() => { setYear('all'); setMon('all'); setGrp('all') }} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-500 hover:bg-canvas">초기화</button>
+      </div>
+
       {months.length === 0 ? (
-        <p className="py-16 text-center text-sm text-ink-400">계약 데이터가 없습니다. (계약 파일 업로드 필요)</p>
+        <p className="py-16 text-center text-sm text-ink-400">조건에 맞는 계약이 없습니다.</p>
       ) : (
         months.map((m) => (
           <Card key={m.month} className="overflow-hidden">
@@ -55,18 +63,12 @@ export default function Contracts() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm table-fixed min-w-[600px]">
                 <colgroup>
-                  <col style={{ width: `${accEm}em` }} />
-                  <col />
-                  <col style={{ width: '5.5em' }} />
-                  <col style={{ width: '6.5em' }} />
-                  <col style={{ width: '8em' }} />
+                  <col style={{ width: `${accEm}em` }} /><col /><col style={{ width: '5.5em' }} /><col style={{ width: '6.5em' }} /><col style={{ width: '8em' }} />
                 </colgroup>
                 <thead>
                   <tr className="text-left text-xs text-ink-400">
-                    <th className="px-5 py-2 font-medium">거래처</th>
-                    <th className="px-3 py-2 font-medium">계약명</th>
-                    <th className="px-3 py-2 font-medium">담당자</th>
-                    <th className="px-3 py-2 font-medium">계약일</th>
+                    <th className="px-5 py-2 font-medium">거래처</th><th className="px-3 py-2 font-medium">계약명</th>
+                    <th className="px-3 py-2 font-medium">담당자</th><th className="px-3 py-2 font-medium">계약일</th>
                     <th className="px-5 py-2 font-medium text-right">금액</th>
                   </tr>
                 </thead>

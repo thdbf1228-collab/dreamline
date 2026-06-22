@@ -5,7 +5,7 @@ import { DealCard, Select } from '../components/ui'
 import { num } from '../lib/format'
 import { Loading, ErrorBox } from './Overview'
 
-const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status: 'all', q: '' }
+const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status: 'all', period: 'all', q: '' }
 
 export default function Accounts() {
   const { rows, error, loading } = useOpportunities()
@@ -13,13 +13,13 @@ export default function Accounts() {
 
   const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].sort(), [rows])
   const reps = useMemo(() => [...new Set((rows || []).map((r) => r.rep_name).filter(Boolean))].sort(), [rows])
-  const filtered = useMemo(
-    () =>
-      (rows ? filterDeals(rows, f) : []).sort(
-        (a, b) => (a.stage_order - b.stage_order) || (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0)
-      ),
-    [rows, f]
-  )
+  const periods = useMemo(() => [...new Set((rows || []).map((r) => (r.start_date || '').slice(0, 7)).filter(Boolean))].sort().reverse(), [rows])
+  const filtered = useMemo(() => {
+    let out = rows ? filterDeals(rows, { ...f, status: f.status === '정체' ? 'all' : f.status }) : []
+    if (f.status === '정체') out = out.filter((d) => d.is_stale)
+    if (f.period !== 'all') out = out.filter((d) => (d.start_date || '').slice(0, 7) === f.period)
+    return out.sort((a, b) => (a.stage_order - b.stage_order) || (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0))
+  }, [rows, f])
 
   if (loading) return <Loading />
   if (error) return <ErrorBox msg={error} />
@@ -35,9 +35,6 @@ export default function Accounts() {
       <div className="flex flex-wrap items-center gap-2">
         <input value={f.q} onChange={(e) => set('q')(e.target.value)} placeholder="거래처 · 영업기회 · 담당자 검색"
           className="w-56 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
-        <Select value={f.salesType} onChange={set('salesType')}>
-          <option value="all">매출구분 전체</option><option value="기업">기업</option><option value="글로벌">글로벌</option>
-        </Select>
         <Select value={f.group} onChange={set('group')}>
           <option value="all">그룹 전체</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}
         </Select>
@@ -48,7 +45,10 @@ export default function Accounts() {
           <option value="all">단계 전체</option>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
         </Select>
         <Select value={f.status} onChange={set('status')}>
-          <option value="all">진행상태 전체</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          <option value="all">진행상태 전체</option>{STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}<option value="정체">정체</option>
+        </Select>
+        <Select value={f.period} onChange={set('period')}>
+          <option value="all">시작일 전체</option>{periods.map((m) => <option key={m} value={m}>{m.slice(2, 4)}.{m.slice(5, 7)}</option>)}
         </Select>
         <button onClick={() => setF(INIT)} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-500 hover:bg-canvas">초기화</button>
       </div>
