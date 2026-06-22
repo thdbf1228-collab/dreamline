@@ -10,7 +10,7 @@ const NAV = [
 ]
 
 export default function Layout({ children }) {
-  const { session, signOut } = useAuth()
+  const { session, isAdmin, signOut } = useAuth()
   const nav = useNavigate()
   const logout = async () => { await signOut(); nav('/') }
 
@@ -20,7 +20,7 @@ export default function Layout({ children }) {
   const pillClass = ({ isActive }) =>
     ['shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
       isActive ? 'bg-brand text-white' : 'bg-canvas text-ink-600'].join(' ')
-  const items = [...NAV, { to: '/admin', label: '관리자' }]
+  const items = [...NAV, ...(isAdmin ? [{ to: '/admin', label: '관리자' }] : [])]
 
   return (
     <div className="min-h-screen bg-canvas md:flex">
@@ -31,8 +31,10 @@ export default function Layout({ children }) {
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {NAV.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>{n.label}</NavLink>)}
-          <div className="pt-3 mt-2 border-t border-line" />
-          <NavLink to="/admin" className={sideClass}>관리자</NavLink>
+          {isAdmin && (<>
+            <div className="pt-3 mt-2 border-t border-line" />
+            <NavLink to="/admin" className={sideClass}>관리자</NavLink>
+          </>)}
         </nav>
         <div className="p-3 border-t border-line">
           {session ? (
