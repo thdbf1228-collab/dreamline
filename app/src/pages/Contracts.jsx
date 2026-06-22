@@ -10,8 +10,14 @@ const monthLabel = (k) => `${k.slice(0, 4)}년 ${Number(k.slice(5, 7))}월`
 export default function Contracts() {
   const { rows } = useContracts()
 
+  const valid = useMemo(() => rows.filter((c) => c.contract_date && c.contract_date >= FROM), [rows])
+  // 거래처 열 고정폭 = 가장 긴 거래처명 기준(한글 1em, 6~16em 캡)
+  const accEm = useMemo(() => {
+    const maxLen = Math.max(6, ...valid.map((c) => (c.account_name || '').length))
+    return Math.min(16, maxLen) + 1
+  }, [valid])
+
   const months = useMemo(() => {
-    const valid = rows.filter((c) => c.contract_date && c.contract_date >= FROM)
     const m = new Map()
     for (const c of valid) {
       const k = c.contract_date.slice(0, 7)
@@ -24,14 +30,14 @@ export default function Contracts() {
         list: list.sort((a, b) => (Number(b.supply_amount) || 0) - (Number(a.supply_amount) || 0)),
         sum: list.reduce((s, c) => s + (Number(c.supply_amount) || 0), 0),
       }))
-      .sort((a, b) => b.month.localeCompare(a.month)) // 최신 월 먼저
-  }, [rows])
+      .sort((a, b) => b.month.localeCompare(a.month))
+  }, [valid])
 
   if (rows === null) return <Loading />
-  const totalCnt = months.reduce((s, m) => s + m.list.length, 0)
+  const totalCnt = valid.length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <header>
         <h1 className="text-xl font-bold text-ink-900">계약</h1>
         <p className="text-sm text-ink-500">계약일 {FROM.replaceAll('-', '.')} 이후 · {num(totalCnt)}건 · 월별 · 금액순</p>
@@ -47,7 +53,14 @@ export default function Contracts() {
               <span className="text-sm text-ink-500">{m.list.length}건 · <b className="text-brand tnum">{won(m.sum)}</b></span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[520px]">
+              <table className="w-full text-sm table-fixed min-w-[600px]">
+                <colgroup>
+                  <col style={{ width: `${accEm}em` }} />
+                  <col />
+                  <col style={{ width: '5.5em' }} />
+                  <col style={{ width: '6.5em' }} />
+                  <col style={{ width: '8em' }} />
+                </colgroup>
                 <thead>
                   <tr className="text-left text-xs text-ink-400">
                     <th className="px-5 py-2 font-medium">거래처</th>
@@ -60,11 +73,11 @@ export default function Contracts() {
                 <tbody className="divide-y divide-line">
                   {m.list.map((c) => (
                     <tr key={c.id} className="hover:bg-canvas">
-                      <td className="px-5 py-2.5 font-medium text-ink-800 whitespace-nowrap">{c.account_name || '-'}</td>
-                      <td className="px-3 py-2.5 text-ink-600 max-w-[280px] truncate" title={c.title}>{c.title}</td>
-                      <td className="px-3 py-2.5 text-ink-500 whitespace-nowrap">{c.rep_name || '-'}</td>
-                      <td className="px-3 py-2.5 text-ink-400 tnum whitespace-nowrap">{(c.contract_date || '').replaceAll('-', '.')}</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-ink-900 tnum whitespace-nowrap">{won(c.supply_amount)}</td>
+                      <td className="px-5 py-2.5 font-medium text-ink-800 truncate" title={c.account_name}>{c.account_name || '-'}</td>
+                      <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}</td>
+                      <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}</td>
+                      <td className="px-3 py-2.5 text-ink-400 tnum">{(c.contract_date || '').replaceAll('-', '.')}</td>
+                      <td className="px-5 py-2.5 text-right font-bold text-ink-900 tnum">{won(c.supply_amount)}</td>
                     </tr>
                   ))}
                 </tbody>
