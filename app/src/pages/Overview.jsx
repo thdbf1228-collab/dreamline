@@ -10,6 +10,8 @@ const SALES = [
   { value: '기업', label: '기업' },
   { value: '글로벌', label: '글로벌' },
 ]
+const C_OPP = '#2F5597' // 영업기회 네이비
+const C_ACT = '#3AA0A0' // 영업활동 틸
 
 function repsOf(rows) {
   const m = new Map()
@@ -19,59 +21,76 @@ function repsOf(rows) {
 
 export default function Overview() {
   const { rows, error, loading } = useOpportunities()
-  const [sales, setSales] = useState('all')
-  const frows = useMemo(() => (rows ? bySalesType(rows, sales) : []), [rows, sales])
   const { rows: acts } = useActivities()
+  const [sales, setSales] = useState('all')
+  const [month, setMonth] = useState('all')
+
+  const monthsAvail = useMemo(() => {
+    const s = new Set()
+    for (const r of rows || []) { const k = (r.start_date || '').slice(0, 7); if (k) s.add(k) }
+    for (const a of acts) { const k = (a.activity_date || '').slice(0, 7); if (k) s.add(k) }
+    return [...s].sort().reverse()
+  }, [rows, acts])
+
+  const fOpp = useMemo(() => {
+    let r = rows ? bySalesType(rows, sales) : []
+    if (month !== 'all') r = r.filter((o) => (o.start_date || '').slice(0, 7) === month)
+    return r
+  }, [rows, sales, month])
+  const fActs = useMemo(() => (month === 'all' ? acts : acts.filter((a) => (a.activity_date || '').slice(0, 7) === month)), [acts, month])
 
   if (loading) return <Loading />
   if (error) return <ErrorBox msg={error} />
 
-  const groups = byGroup(frows).map((g) => ({ name: g.name, count: g.total, rows: g.rows }))
-  const reps = repsOf(frows)
-  const actGroups = groups.map((g) => ({ name: g.name, count: acts.filter((a) => (a.group_name || '미배정') === g.name).length }))
-  const actReps = repsOf(acts)
+  const groups = byGroup(fOpp).map((g) => ({ name: g.name, count: g.total, rows: g.rows }))
+  const actGroups = groups.map((g) => ({ name: g.name, count: fActs.filter((a) => (a.group_name || '미배정') === g.name).length }))
   const actMap = new Map(actGroups.map((g) => [g.name, g.count]))
+  // 담당자별 — 미배정(타부서 발령자) 제외
+  const reps = repsOf(fOpp.filter((r) => r.group_name))
+  const actReps = repsOf(fActs.filter((a) => a.group_name))
+
+  const periodLabel = month === 'all' ? '2026.1~ 누적' : `${month.slice(0, 4)}.${month.slice(5, 7)}`
 
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink-900">영업 현황</h1>
-          <p className="text-sm text-ink-500">영업기회 {num(frows.length)}건 · 영업활동 {num(acts.length)}건 (단위: 건)</p>
+          <p className="text-sm text-ink-500">{periodLabel} · 영업기회 {num(fOpp.length)}건 · 영업활동 {num(fActs.length)}건</p>
         </div>
-        <Segment value={sales} onChange={setSales} options={SALES} />
+        <div className="flex items-center gap-2">
+          <select value={month} onChange={(e) => setMonth(e.target.value)} className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
+            <option value="all">전체 (누적)</option>
+            {monthsAvail.map((m) => <option key={m} value={m}>{m.slice(0, 4)}.{m.slice(5, 7)}</option>)}
+          </select>
+          <Segment value={sales} onChange={setSales} options={SALES} />
+        </div>
       </header>
 
-      {/* 그룹 요약 */}
+      {/* 1. 그룹 요약 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {groups.map((g) => (
           <Card key={g.name} className="p-4">
             <div className="text-sm font-bold text-ink-900">{g.name}</div>
             <div className="mt-2 flex items-baseline justify-between text-xs text-ink-500">
-              <span>영업기회</span><span className="text-lg font-bold text-brand tnum">{g.count}</span>
+              <span>영업기회</span><span className="text-lg font-bold tnum" style={{ color: C_OPP }}>{g.count}</span>
             </div>
             <div className="flex items-baseline justify-between text-xs text-ink-500">
-              <span>영업활동</span><span className="text-lg font-bold text-violet-600 tnum">{actMap.get(g.name) || 0}</span>
+              <span>영업활동</span><span className="text-lg font-bold tnum" style={{ color: C_ACT }}>{actMap.get(g.name) || 0}</span>
             </div>
           </Card>
         ))}
       </div>
 
-      {/* 그룹별 막대 */}
+      {/* 2. 그룹별 막대 */}
       <div className="grid md:grid-cols-2 gap-4">
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 그룹별</h2><VBars data={groups} color="#1D4ED8" /></Card>
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 그룹별</h2><VBars data={actGroups} color="#7C3AED" /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 그룹별</h2><VBars data={groups} color={C_OPP} /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 그룹별</h2><VBars data={actGroups} color={C_ACT} /></Card>
       </div>
 
-      {/* 담당자별 막대 */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 담당자별</h2><HBars data={reps} color="#1D4ED8" /></Card>
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 담당자별</h2><HBars data={actReps} color="#7C3AED" /></Card>
-      </div>
-
-      {/* 그룹별 지표 */}
+      {/* 3. 영업기회 현황 (구 그룹별 지표) */}
       <Card className="overflow-hidden">
-        <div className="px-5 pt-5 pb-3 text-base font-bold text-ink-900">그룹별 지표</div>
+        <div className="px-5 pt-5 pb-3 text-base font-bold text-ink-900">영업기회 현황</div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[420px]">
             <thead>
@@ -100,11 +119,17 @@ export default function Overview() {
           </table>
         </div>
       </Card>
+
+      {/* 4. 담당자별 막대 (맨 아래, 미배정 제외) */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 담당자별</h2><HBars data={reps} color={C_OPP} /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 담당자별</h2><HBars data={actReps} color={C_ACT} /></Card>
+      </div>
     </div>
   )
 }
 
-function VBars({ data, color = '#1D4ED8' }) {
+function VBars({ data, color }) {
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
     <div className="flex items-end gap-4 h-40 px-2">
@@ -119,7 +144,7 @@ function VBars({ data, color = '#1D4ED8' }) {
   )
 }
 
-function HBars({ data, color = '#1D4ED8' }) {
+function HBars({ data, color }) {
   if (!data.length) return <p className="text-sm text-ink-400">데이터 없음</p>
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
@@ -137,14 +162,7 @@ function HBars({ data, color = '#1D4ED8' }) {
   )
 }
 
-export function Loading() {
-  return <div className="py-20 text-center text-sm text-ink-400">불러오는 중…</div>
-}
+export function Loading() { return <div className="py-20 text-center text-sm text-ink-400">불러오는 중…</div> }
 export function ErrorBox({ msg }) {
-  return (
-    <div className="py-20 text-center">
-      <p className="text-sm text-lost">데이터를 불러오지 못했습니다.</p>
-      <p className="mt-1 text-xs text-ink-400">{msg}</p>
-    </div>
-  )
+  return (<div className="py-20 text-center"><p className="text-sm text-lost">데이터를 불러오지 못했습니다.</p><p className="mt-1 text-xs text-ink-400">{msg}</p></div>)
 }

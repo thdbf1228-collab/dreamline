@@ -3,8 +3,7 @@ import { useAuth } from '../auth/AuthProvider'
 
 const NAV = [
   { to: '/', label: '전체', end: true },
-  { to: '/accounts', label: '거래처별' },
-  { to: '/reps', label: '담당자별' },
+  { to: '/accounts', label: '파이프라인 현황' },
   { to: '/contracts', label: '계약' },
   { to: '/activity', label: '활동' },
 ]

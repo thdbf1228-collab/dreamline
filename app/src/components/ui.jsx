@@ -92,7 +92,6 @@ const GROUP_BADGE = 'bg-violet-100 text-violet-700'
 // 파이프라인 카드 — 모든 카드 동일 높이(제목 2줄·사유 2줄 고정), 날짜·금액 맨 아래
 export function DealCard({ deal }) {
   const { isAdmin } = useAuth()
-  const overdue = isOverdue(deal)
   const reason = deal.note || deal.lost_reason
   const showReason = (deal.status === '보류/연기' || deal.status === '종료(실패)') && reason
   const [memo, setMemo] = useState(deal.admin_memo || '')
@@ -107,7 +106,6 @@ export function DealCard({ deal }) {
       <div className="flex items-center gap-1.5 mb-2">
         <StatusPill status={deal.status} />
         {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
-        {overdue && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-rose-100 text-rose-600">기한초과</span>}
         {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
       </div>
       {isAdmin ? (
@@ -125,7 +123,7 @@ export function DealCard({ deal }) {
         <StageBar stageId={deal.stage_id} />
       </div>
       <div className="mt-2 min-h-[2.4rem]">
-        {showReason && <div className="rounded bg-amber-50 px-2 py-1 text-[11px] text-stale line-clamp-2">사유: {reason}</div>}
+        {showReason && <div className="rounded bg-red-50 px-2 py-1 text-[11px] font-bold text-red-700 line-clamp-2">사유: {reason}</div>}
       </div>
       <div className="mt-auto pt-1 flex items-center justify-between border-t border-line/60">
         <span className="text-[11px] text-ink-400 tnum">

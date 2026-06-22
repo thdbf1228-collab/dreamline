@@ -6,7 +6,6 @@ import ForcedPasswordChange from './components/ForcedPasswordChange'
 import Layout from './components/Layout'
 import Overview from './pages/Overview'
 import Accounts from './pages/Accounts'
-import Reps from './pages/Reps'
 import Contracts from './pages/Contracts'
 import Activity from './pages/Activity'
 
@@ -32,7 +31,6 @@ function Gate() {
       <Routes>
         <Route path="/" element={<Overview />} />
         <Route path="/accounts" element={<Accounts />} />
-        <Route path="/reps" element={<Reps />} />
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/admin" element={<AdminGate />} />

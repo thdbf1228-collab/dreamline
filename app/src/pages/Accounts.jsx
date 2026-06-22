@@ -28,7 +28,7 @@ export default function Accounts() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-xl font-bold text-ink-900">거래처별 파이프라인</h1>
+        <h1 className="text-xl font-bold text-ink-900">파이프라인 현황</h1>
         <p className="text-sm text-ink-500">{num(filtered.length)}건 / 전체 {num((rows || []).length)}건</p>
       </header>
 
