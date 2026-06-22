@@ -154,3 +154,30 @@ export function byMonth(rows) {
 
 export const STAGE_SHORT = ['', '인지', '제안', '견적', '계약', '개통']
 export const STAGE_FILL = ['', '#8B7FD0', '#3BA9C4', '#E89B4B', '#4FA97E', '#2E7D52']
+
+// 진행/성공/실패률 (전체 대비)
+export function rates(rows) {
+  const total = rows.length
+  const c = (s) => rows.filter((r) => r.status === s).length
+  const won = c('종료(성공)'), lost = c('종료(실패)'), prog = c('진행중'), hold = c('보류/연기')
+  const p = (n) => (total ? (n / total) * 100 : 0)
+  return { total, won, lost, prog, hold, progRate: p(prog), winRate: p(won), lostRate: p(lost) }
+}
+// 날짜 필드 기준 월별 카운트
+export function countByMonth(rows, field) {
+  const m = new Map()
+  for (const r of rows) { const k = (r[field] || '').slice(0, 7); if (!k) continue; m.set(k, (m.get(k) || 0) + 1) }
+  return [...m.entries()].map(([month, count]) => ({ month, count })).sort((a, b) => a.month.localeCompare(b.month))
+}
+// 주 시작(월요일) 키 + 주별 카운트
+export function weekStart(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr); if (isNaN(d)) return null
+  const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day)
+  return d.toISOString().slice(0, 10)
+}
+export function countByWeek(rows, field) {
+  const m = new Map()
+  for (const r of rows) { const k = weekStart(r[field]); if (!k) continue; m.set(k, (m.get(k) || 0) + 1) }
+  return [...m.entries()].map(([week, count]) => ({ week, count })).sort((a, b) => a.week.localeCompare(b.week))
+}

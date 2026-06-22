@@ -137,3 +137,42 @@ export async function ingestContracts(file, log = () => {}) {
   log(`계약 ${contracts.length}건 반영, 영업기회 없는 ${dropped}건 제외`)
   return { contracts: contracts.length, dropped }
 }
+
+// ── 영업활동 적재 ──────────────────────────────────────────
+export async function ingestActivities(file, log = () => {}) {
+  const rows = (await readRows(file)).filter((r) => r['영업활동ID'] !== '')
+  log(`영업활동 ${rows.length}행 읽음`)
+
+  // 담당자 — 없는 이름만 추가(기존 그룹배정 보존)
+  const repNames = [...new Set(rows.map((r) => String(r['담당자']).trim()).filter(Boolean))]
+  const { data: existingReps } = await supabase.from('reps').select('id,name')
+  const have = new Set((existingReps || []).map((r) => r.name))
+  const newReps = repNames.filter((n) => !have.has(n)).map((name) => ({ name }))
+  if (newReps.length) {
+    const { error } = await supabase.from('reps').insert(newReps)
+    if (error) throw new Error('담당자 추가 실패: ' + error.message)
+    log(`담당자 ${newReps.length}명 신규 추가(그룹 미배정)`)
+  }
+  const { data: reps } = await supabase.from('reps').select('id,name')
+  const repMap = new Map((reps || []).map((r) => [r.name, r.id]))
+
+  const acts = rows.map((r) => {
+    let type = String(r['활동분류'] || '').trim()
+    if (!type || type.startsWith('선택하세요')) type = '미분류'
+    return {
+      external_id: parseInt0(r['영업활동ID']),
+      rep_id: repMap.get(String(r['담당자']).trim()) || null,
+      account_external_id: parseInt0(r['고객사ID']) || null,
+      account_name: String(r['고객사'] || '').trim() || null,
+      opportunity_external_id: parseInt0(r['영업기회ID']) || null,
+      activity_type: type,
+      activity_purpose: String(r['활동목적'] || '').trim() || null,
+      activity_date: parseDate(r['활동일시']),
+    }
+  })
+
+  const { error } = await supabase.from('activities').upsert(acts, { onConflict: 'external_id' })
+  if (error) throw new Error('영업활동 upsert 실패: ' + error.message)
+  log(`영업활동 ${acts.length}건 반영 완료`)
+  return { activities: acts.length, reps: newReps.length }
+}

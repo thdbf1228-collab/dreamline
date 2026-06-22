@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useOpportunities } from '../data/useOpportunities'
-import { funnel, hexData, repMetrics, bySalesType } from '../data/aggregate'
+import { funnel, hexData, repMetrics, bySalesType, rates } from '../data/aggregate'
 import { Card, KpiCard, Segment } from '../components/ui'
 import Hexagon from '../components/Hexagon'
 import { won, pct } from '../lib/format'
@@ -74,6 +74,13 @@ export default function Reps() {
               <KpiCard label="진행 파이프라인 금액" value={won(m._k.pipelineAmount)} sub={`${m._k.pipelineCount}건`} />
               <KpiCard label="확정매출 금액" value={won(m._k.confirmedAmount)} sub={`${m._k.wonCount}건`} />
               <KpiCard label="전환율" value={pct(m._k.winRate, 1)} />
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-1 px-1 text-sm">
+              {(() => { const rt = rates(m._rows); return (<>
+                <span className="text-ink-500">진행률 <b className="text-brand tnum">{rt.progRate.toFixed(0)}%</b></span>
+                <span className="text-ink-500">성공률 <b className="text-won tnum">{rt.winRate.toFixed(0)}%</b></span>
+                <span className="text-ink-500">실패률 <b className="text-lost tnum">{rt.lostRate.toFixed(0)}%</b></span>
+              </>) })()}
             </div>
             <Card className="p-6 flex-1 flex flex-col">
               <h2 className="text-sm font-semibold text-ink-900 mb-5">단계별 파이프라인</h2>

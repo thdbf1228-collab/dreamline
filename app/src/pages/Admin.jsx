@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { ingestOpportunities, ingestContracts } from '../lib/upload'
+import { ingestOpportunities, ingestContracts, ingestActivities } from '../lib/upload'
 import { Card } from '../components/ui'
 
 const PHOTO_BUCKET = 'rep-photos'
@@ -25,23 +25,24 @@ export default function Admin() {
 }
 
 function UploadPanel() {
-  const oppRef = useRef(); const conRef = useRef()
+  const oppRef = useRef(); const conRef = useRef(); const actRef = useRef()
   const [busy, setBusy] = useState(false); const [logs, setLogs] = useState([])
   const log = (m) => setLogs((l) => [...l, m])
   async function run() {
-    const o = oppRef.current?.files?.[0]; const c = conRef.current?.files?.[0]
-    if (!o && !c) return log('업로드할 파일을 선택하세요.')
+    const o = oppRef.current?.files?.[0]; const c = conRef.current?.files?.[0]; const ac = actRef.current?.files?.[0]
+    if (!o && !c && !ac) return log('업로드할 파일을 선택하세요.')
     setBusy(true); setLogs([])
-    try { if (o) await ingestOpportunities(o, log); if (c) await ingestContracts(c, log); log('✅ 완료.') }
+    try { if (o) await ingestOpportunities(o, log); if (c) await ingestContracts(c, log); if (ac) await ingestActivities(ac, log); log('✅ 완료.') }
     catch (e) { log('❌ ' + e.message) } finally { setBusy(false) }
   }
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">주간 데이터 업로드</h2>
-      <p className="text-xs text-ink-400 mb-4">영업기회ID 기준 갱신 (영업기회 → 계약 순). 중복 없이 누적·갱신.</p>
-      <div className="grid md:grid-cols-2 gap-4">
-        <FileField label="영업기회 (전체)" inputRef={oppRef} />
-        <FileField label="계약 (확정금액)" inputRef={conRef} />
+      <p className="text-xs text-ink-400 mb-4">ID 기준 갱신 (영업기회 → 계약 → 영업활동 순). 중복 없이 누적·갱신. 셋 중 아무거나 올려도 됨.</p>
+      <div className="grid md:grid-cols-3 gap-4">
+        <FileField label="영업기회" inputRef={oppRef} />
+        <FileField label="계약" inputRef={conRef} />
+        <FileField label="영업활동" inputRef={actRef} />
       </div>
       <button onClick={run} disabled={busy} className="mt-4 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
         {busy ? '처리 중…' : '업로드 · 반영'}

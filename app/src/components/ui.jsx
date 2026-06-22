@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { won, num, pct } from '../lib/format'
 import { STAGE_SHORT, STAGE_FILL, isOverdue } from '../data/aggregate'
+import { useAuth } from '../auth/AuthProvider'
+import { supabase } from '../lib/supabase'
 
 export function Card({ children, className = '' }) {
   return <div className={`bg-paper rounded-xl border border-line shadow-card ${className}`}>{children}</div>
@@ -88,8 +91,17 @@ function StageBar({ stageId }) {
 const GROUP_BADGE = 'bg-violet-100 text-violet-700'
 // 파이프라인 카드 — 모든 카드 동일 높이(제목 2줄·사유 2줄 고정), 날짜·금액 맨 아래
 export function DealCard({ deal }) {
+  const { isAdmin } = useAuth()
   const overdue = isOverdue(deal)
-  const showReason = (deal.status === '보류/연기' || deal.status === '종료(실패)') && deal.note
+  const reason = deal.note || deal.lost_reason
+  const showReason = (deal.status === '보류/연기' || deal.status === '종료(실패)') && reason
+  const [memo, setMemo] = useState(deal.admin_memo || '')
+  const saveMemo = async () => {
+    const v = memo.trim()
+    if (v === (deal.admin_memo || '')) return
+    await supabase.from('opportunities').update({ admin_memo: v || null }).eq('id', deal.id)
+    deal.admin_memo = v
+  }
   return (
     <Card className="p-4 flex flex-col h-full">
       <div className="flex items-center gap-1.5 mb-2">
@@ -98,6 +110,12 @@ export function DealCard({ deal }) {
         {overdue && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-rose-100 text-rose-600">기한초과</span>}
         {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
       </div>
+      {isAdmin ? (
+        <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
+          className="mb-2 w-full rounded-md border border-dashed border-line bg-canvas px-2 py-1 text-xs text-ink-800 focus:border-brand focus:bg-paper" />
+      ) : (deal.admin_memo ? (
+        <div className="mb-2 rounded-md bg-brand-soft px-2 py-1 text-xs font-semibold text-brand">{deal.admin_memo}</div>
+      ) : null)}
       <div className="text-sm font-semibold text-ink-900 leading-snug line-clamp-2 min-h-[2.5rem]" title={deal.title}>{deal.title}</div>
       <div className="mt-1 flex items-center justify-between text-xs">
         <span className="text-ink-500 truncate">{deal.account_name}</span>
@@ -106,9 +124,8 @@ export function DealCard({ deal }) {
       <div className="mt-3">
         <StageBar stageId={deal.stage_id} />
       </div>
-      {/* 사유: 항상 2줄 공간 확보, 색은 사유 있을 때만 */}
       <div className="mt-2 min-h-[2.4rem]">
-        {showReason && <div className="rounded bg-amber-50 px-2 py-1 text-[11px] text-stale line-clamp-2">사유: {deal.note}</div>}
+        {showReason && <div className="rounded bg-amber-50 px-2 py-1 text-[11px] text-stale line-clamp-2">사유: {reason}</div>}
       </div>
       <div className="mt-auto pt-1 flex items-center justify-between border-t border-line/60">
         <span className="text-[11px] text-ink-400 tnum">
