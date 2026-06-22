@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
-import { kpis, byGroup, bySalesType, rates } from '../data/aggregate'
-import { Card, KpiCard, Segment } from '../components/ui'
-import { num, pct } from '../lib/format'
+import { byGroup, bySalesType, rates } from '../data/aggregate'
+import { Card, Segment } from '../components/ui'
+import { num } from '../lib/format'
 
 const SALES = [
   { value: 'all', label: '전체' },
@@ -26,41 +26,47 @@ export default function Overview() {
   if (loading) return <Loading />
   if (error) return <ErrorBox msg={error} />
 
-  const k = kpis(frows)
   const groups = byGroup(frows).map((g) => ({ name: g.name, count: g.total, rows: g.rows }))
   const reps = repsOf(frows)
   const actGroups = groups.map((g) => ({ name: g.name, count: acts.filter((a) => (a.group_name || '미배정') === g.name).length }))
   const actReps = repsOf(acts)
-  const hasAct = acts.length > 0
+  const actMap = new Map(actGroups.map((g) => [g.name, g.count]))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink-900">영업 현황</h1>
-          <p className="text-sm text-ink-500">영업기회 {num(k.total)}건 (단위: 건)</p>
+          <p className="text-sm text-ink-500">영업기회 {num(frows.length)}건 · 영업활동 {num(acts.length)}건 (단위: 건)</p>
         </div>
         <Segment value={sales} onChange={setSales} options={SALES} />
       </header>
 
-      {/* KPI (건수 중심) */}
+      {/* 그룹 요약 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="영업기회" value={`${num(k.total)}건`} />
-        <KpiCard label="진행중" value={`${num(k.pipelineCount)}건`} />
-        <KpiCard label="성공(계약)" value={`${num(k.wonCount)}건`} />
-        <KpiCard label="전환율" value={pct(k.winRate, 0)} sub={`성공 ${k.wonCount}/실패 ${k.lostCount}`} />
+        {groups.map((g) => (
+          <Card key={g.name} className="p-4">
+            <div className="text-sm font-bold text-ink-900">{g.name}</div>
+            <div className="mt-2 flex items-baseline justify-between text-xs text-ink-500">
+              <span>영업기회</span><span className="text-lg font-bold text-brand tnum">{g.count}</span>
+            </div>
+            <div className="flex items-baseline justify-between text-xs text-ink-500">
+              <span>영업활동</span><span className="text-lg font-bold text-violet-600 tnum">{actMap.get(g.name) || 0}</span>
+            </div>
+          </Card>
+        ))}
       </div>
 
-      {/* 그룹별 / 담당자별 (영업기회) */}
+      {/* 그룹별 막대 */}
       <div className="grid md:grid-cols-2 gap-4">
-        <Card className="p-5">
-          <h2 className="text-base font-bold text-ink-900 mb-4">영업기회 그룹별</h2>
-          <VBars data={groups} />
-        </Card>
-        <Card className="p-5">
-          <h2 className="text-base font-bold text-ink-900 mb-4">영업기회 담당자별</h2>
-          <HBars data={reps} />
-        </Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 그룹별</h2><VBars data={groups} color="#1D4ED8" /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 그룹별</h2><VBars data={actGroups} color="#7C3AED" /></Card>
+      </div>
+
+      {/* 담당자별 막대 */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 담당자별</h2><HBars data={reps} color="#1D4ED8" /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 담당자별</h2><HBars data={actReps} color="#7C3AED" /></Card>
       </div>
 
       {/* 그룹별 지표 */}
@@ -94,73 +100,18 @@ export default function Overview() {
           </table>
         </div>
       </Card>
-
-      {/* 영업활동 */}
-      {hasAct ? (
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card className="p-5">
-            <h2 className="text-base font-bold text-ink-900 mb-1">영업활동 그룹별</h2>
-            <p className="text-xs text-ink-400 mb-4">총 {num(acts.length)}건 · 매출구분 무관</p>
-            <VBars data={actGroups} />
-          </Card>
-          <Card className="p-5">
-            <h2 className="text-base font-bold text-ink-900 mb-4">영업활동 담당자별</h2>
-            <HBars data={actReps} />
-          </Card>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          <Placeholder title="영업활동 그룹별" />
-          <Placeholder title="영업활동 담당자별" />
-        </div>
-      )}
-
-      {/* 그룹별·담당자별 표 */}
-      <Card className="overflow-hidden">
-        <div className="px-5 pt-5 pb-3 text-base font-bold text-ink-900">영업기회 그룹별 · 담당자별</div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[480px]">
-            <thead>
-              <tr className="bg-canvas text-left text-xs text-ink-500">
-                <th className="px-5 py-2 font-medium">그룹</th>
-                <th className="px-3 py-2 font-medium">담당자</th>
-                <th className="px-3 py-2 font-medium text-right">건수</th>
-                <th className="px-5 py-2 font-medium text-right">그룹 합계</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {groups.map((g) => {
-                const rg = repsOf(g.rows)
-                return (
-                  <tr key={g.name}>
-                    <td className="px-5 py-2.5 font-semibold text-ink-900 whitespace-nowrap">{g.name}</td>
-                    <td className="px-3 py-2.5 text-ink-600">{rg.map((r) => r.name).join(' / ') || '-'}</td>
-                    <td className="px-3 py-2.5 text-right text-ink-600 tnum whitespace-nowrap">{rg.map((r) => r.count).join(' / ') || '-'}</td>
-                    <td className="px-5 py-2.5 text-right font-bold text-brand tnum">{g.count}</td>
-                  </tr>
-                )
-              })}
-              <tr className="bg-canvas">
-                <td className="px-5 py-2.5 font-bold text-ink-900" colSpan={3}>합계</td>
-                <td className="px-5 py-2.5 text-right font-bold text-brand tnum">{num(k.total)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
     </div>
   )
 }
 
-// 세로 막대 (그룹별)
-function VBars({ data }) {
+function VBars({ data, color = '#1D4ED8' }) {
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
-    <div className="flex items-end gap-4 h-44 px-2">
+    <div className="flex items-end gap-4 h-40 px-2">
       {data.map((d) => (
         <div key={d.name} className="flex-1 flex flex-col items-center justify-end h-full">
           <div className="text-sm font-bold text-ink-900 tnum mb-1">{d.count}</div>
-          <div className="w-full max-w-[64px] rounded-t bg-brand" style={{ height: `${(d.count / max) * 100}%`, minHeight: d.count ? 4 : 0 }} />
+          <div className="w-full max-w-[64px] rounded-t" style={{ height: `${(d.count / max) * 100}%`, minHeight: d.count ? 4 : 0, background: color }} />
           <div className="mt-2 text-xs text-ink-600">{d.name}</div>
         </div>
       ))}
@@ -168,33 +119,21 @@ function VBars({ data }) {
   )
 }
 
-// 가로 막대 (담당자별)
-function HBars({ data }) {
+function HBars({ data, color = '#1D4ED8' }) {
   if (!data.length) return <p className="text-sm text-ink-400">데이터 없음</p>
   const max = Math.max(1, ...data.map((d) => d.count))
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5 max-h-72 overflow-auto">
       {data.map((d) => (
         <div key={d.name} className="flex items-center gap-3">
           <span className="w-16 shrink-0 text-sm text-ink-700 truncate">{d.name}</span>
           <div className="flex-1 h-5 rounded bg-canvas overflow-hidden">
-            <div className="h-full rounded bg-brand" style={{ width: `${(d.count / max) * 100}%`, minWidth: d.count ? 6 : 0 }} />
+            <div className="h-full rounded" style={{ width: `${(d.count / max) * 100}%`, minWidth: d.count ? 6 : 0, background: color }} />
           </div>
           <span className="w-8 shrink-0 text-right text-sm font-semibold text-ink-900 tnum">{d.count}</span>
         </div>
       ))}
     </div>
-  )
-}
-
-function Placeholder({ title }) {
-  return (
-    <Card className="p-5 border-dashed">
-      <h2 className="text-base font-bold text-ink-400 mb-2">{title}</h2>
-      <div className="h-32 flex items-center justify-center rounded-lg bg-canvas text-sm text-ink-400">
-        영업활동 데이터를 업로드하면 표시됩니다
-      </div>
-    </Card>
   )
 }
 
