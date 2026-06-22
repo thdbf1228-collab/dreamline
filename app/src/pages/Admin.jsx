@@ -120,18 +120,12 @@ function RepPanel({ groups }) {
   }
   async function addRep() {
     const n = nn.trim(); if (!n) return setMsg('이름을 입력하세요.')
-    const { data, error } = await supabase.from('reps').insert({ name: n, group_id: ng || null, email: ne.trim() || null }).select().single()
+    const { data, error } = await supabase.from('reps').insert({ name: n, group_id: ng || null }).select().single()
     if (error) return setMsg('담당자 추가 실패: ' + error.message)
     const file = newPhoto.current?.files?.[0]
     if (file && data) { const url = await uploadPhoto(data.id, file); if (url) await supabase.from('reps').update({ photo_url: url }).eq('id', data.id) }
-    let acct = ''
-    if (ne.trim()) {
-      const { data: r, error: e2 } = await supabase.functions.invoke('reset-password', { body: { email: ne.trim() } })
-      if (e2) { let d = e2.message; try { const b = await e2.context.json(); if (b?.error) d = b.error } catch {}; acct = ` · 로그인 계정 처리 실패: ${d}` }
-      else acct = ` · ${r?.message || '로그인 계정 준비됨'}`
-    }
-    setNn(''); setNg(''); setNe(''); if (newPhoto.current) newPhoto.current.value = ''
-    setMsg(`'${n}' 추가됨${acct}`); load()
+    setNn(''); setNg(''); if (newPhoto.current) newPhoto.current.value = ''
+    setMsg(`'${n}' 추가됨`); load()
   }
   async function removeRep(rep) {
     if (!confirm(`담당자 '${rep.name}' 완전 삭제할까요?\n· 담당자 정보 삭제\n· 로그인 계정도 삭제\n(영업기회의 담당자 연결은 해제됩니다. 보통은 '퇴사'를 권장)`)) return
@@ -207,22 +201,15 @@ function RepPanel({ groups }) {
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">담당자 관리</h2>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <p className="text-xs text-ink-400">추가 시 이메일 넣으면 로그인 계정 자동 생성(비번 111111). "비번 111111/계정생성"은 계정 없으면 만들고 있으면 초기화.</p>
-        <button onClick={provisionAll} disabled={running} className="shrink-0 rounded-lg border border-brand px-3 py-1.5 text-sm font-medium text-brand hover:bg-brand-soft disabled:opacity-50">
-          {running ? '처리 중…' : '전체 계정 생성/동기화'}
-        </button>
-      </div>
       {msg && <p className="mb-3 text-xs text-ink-500 whitespace-pre-line">{msg}</p>}
 
-      {/* 추가 폼: 이름 / 그룹 / 아이디 / 사진 */}
+      {/* 추가 폼: 이름 / 그룹 / 사진 */}
       <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg bg-canvas">
         <input value={nn} onChange={(e) => setNn(e.target.value)} placeholder="새 담당자 이름" className="w-32 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
         <select value={ng} onChange={(e) => setNg(e.target.value)} className="rounded-lg border border-line px-2 py-1.5 text-sm focus:border-brand">
           <option value="">그룹 선택</option>
           {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
         </select>
-        <input value={ne} onChange={(e) => setNe(e.target.value)} placeholder="아이디 (이메일)" className="w-48 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
         <input ref={newPhoto} type="file" accept="image/*" className="text-xs text-ink-500 file:mr-2 file:rounded file:border-0 file:bg-brand-soft file:px-2 file:py-1 file:text-xs file:text-brand" />
         <button onClick={addRep} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark">담당자 추가</button>
       </div>
@@ -231,9 +218,7 @@ function RepPanel({ groups }) {
         <span className="w-9" />
         <span className="w-16">이름</span>
         <span className="w-[116px]">그룹</span>
-        <span className="w-52">아이디(이메일)</span>
         <span>사진</span>
-        <span>비번</span>
       </div>
       {leaving && (
         <div className="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 text-sm">
@@ -264,15 +249,11 @@ function RepPanel({ groups }) {
               <option value="">미배정</option>
               {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
-            <input type="email" defaultValue={rep.email || ''} placeholder="아이디 (이메일)"
-              onBlur={(e) => { const v = e.target.value.trim(); if (v !== (rep.email || '')) update(rep.id, { email: v || null }) }}
-              className="w-52 rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand" />
             {!left && (
               <label className="text-xs text-brand cursor-pointer hover:underline">사진
                 <input type="file" accept="image/*" className="hidden" onChange={async (e) => { const url = await uploadPhoto(rep.id, e.target.files?.[0]); if (url) update(rep.id, { photo_url: url }) }} />
               </label>
             )}
-            {!left && <button onClick={() => resetPw(rep.email)} className="text-xs text-stale hover:underline">비번 111111/계정생성</button>}
             {left
               ? <button onClick={() => restore(rep)} className="ml-auto text-xs text-brand hover:underline">복구</button>
               : <button onClick={() => { setLeaving(rep); setTransferTo('') }} className="ml-auto text-xs text-stale hover:underline">퇴사</button>}
