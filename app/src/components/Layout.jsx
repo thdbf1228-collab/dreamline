@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
+import { useNotice } from '../data/useNotice'
 
 const NAV = [
   { to: '/', label: '전체', end: true },
@@ -12,6 +13,7 @@ export default function Layout({ children }) {
   const { session, isAdmin, signOut } = useAuth()
   const nav = useNavigate()
   const logout = async () => { await signOut(); nav('/') }
+  const notice = useNotice()
 
   const sideClass = ({ isActive }) =>
     ['block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
@@ -59,7 +61,14 @@ export default function Layout({ children }) {
       </header>
 
       <main className="flex-1 min-w-0">
-        <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8 overflow-x-hidden">{children}</div>
+        <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8 overflow-x-hidden">
+          {notice && (
+            <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-wrap">
+              <span className="mr-2 font-bold">📢 공지</span>{notice}
+            </div>
+          )}
+          {children}
+        </div>
       </main>
     </div>
   )

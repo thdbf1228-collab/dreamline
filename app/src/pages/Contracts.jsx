@@ -16,6 +16,7 @@ export default function Contracts() {
   const base = useMemo(() => rows.filter((c) => c.contract_date && c.contract_date >= FROM), [rows])
   const years = useMemo(() => [...new Set(base.map((c) => c.contract_date.slice(0, 4)))].sort().reverse(), [base])
   const groups = useMemo(() => [...new Set(base.map((c) => c.group_name).filter(Boolean))].sort(), [base])
+  const monthsInData = useMemo(() => [...new Set(base.map((c) => c.contract_date.slice(5, 7)))].sort(), [base])
 
   const valid = useMemo(() => base.filter((c) =>
     (year === 'all' || c.contract_date.slice(0, 4) === year) &&
@@ -46,7 +47,7 @@ export default function Contracts() {
 
       <div className="flex flex-wrap items-center gap-2">
         <Select value={year} onChange={setYear}><option value="all">년도 전체</option>{years.map((y) => <option key={y} value={y}>{y}년</option>)}</Select>
-        <Select value={mon} onChange={setMon}><option value="all">월 전체</option>{Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map((m) => <option key={m} value={m}>{Number(m)}월</option>)}</Select>
+        <Select value={mon} onChange={setMon}><option value="all">월 전체</option>{monthsInData.map((m) => <option key={m} value={m}>{Number(m)}월</option>)}</Select>
         <Select value={grp} onChange={setGrp}><option value="all">그룹 전체</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}</Select>
         <button onClick={() => { setYear('all'); setMon('all'); setGrp('all') }} className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-500 hover:bg-canvas">초기화</button>
       </div>
@@ -63,7 +64,7 @@ export default function Contracts() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm table-fixed min-w-[600px]">
                 <colgroup>
-                  <col style={{ width: `${accEm}em` }} /><col /><col style={{ width: '5.5em' }} /><col style={{ width: '6.5em' }} /><col style={{ width: '8em' }} />
+                  <col style={{ width: `${accEm}em` }} /><col /><col style={{ width: '8em' }} /><col style={{ width: '6.5em' }} /><col style={{ width: '8em' }} />
                 </colgroup>
                 <thead>
                   <tr className="text-left text-xs text-ink-400">
@@ -77,7 +78,7 @@ export default function Contracts() {
                     <tr key={c.id} className="hover:bg-canvas">
                       <td className="px-5 py-2.5 font-medium text-ink-800 truncate" title={c.account_name}>{c.account_name || '-'}</td>
                       <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}</td>
-                      <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}</td>
+                      <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}{c.group_name ? <span className="text-ink-400"> · {c.group_name}</span> : ''}</td>
                       <td className="px-3 py-2.5 text-ink-400 tnum">{(c.contract_date || '').replaceAll('-', '.')}</td>
                       <td className="px-5 py-2.5 text-right font-bold text-ink-900 tnum">{won(c.supply_amount)}</td>
                     </tr>

@@ -5,6 +5,7 @@ import { DealCard, Select } from '../components/ui'
 import { num } from '../lib/format'
 import { Loading, ErrorBox } from './Overview'
 
+const STATUS_ORDER = { '종료(성공)': 0, '보류/연기': 1, '종료(실패)': 2, '진행중': 3 }
 const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status: 'all', period: 'all', q: '' }
 
 export default function Accounts() {
@@ -18,7 +19,7 @@ export default function Accounts() {
     let out = rows ? filterDeals(rows, { ...f, status: f.status === '정체' ? 'all' : f.status }) : []
     if (f.status === '정체') out = out.filter((d) => d.is_stale)
     if (f.period !== 'all') out = out.filter((d) => (d.start_date || '').slice(0, 7) === f.period)
-    return out.sort((a, b) => (a.stage_order - b.stage_order) || (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0))
+    return out.sort((a, b) => ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)) || (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0))
   }, [rows, f])
 
   if (loading) return <Loading />

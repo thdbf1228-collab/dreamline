@@ -5,6 +5,29 @@ import { Card } from '../components/ui'
 
 const PHOTO_BUCKET = 'rep-photos'
 
+function NoticePanel() {
+  const [text, setText] = useState('')
+  const [msg, setMsg] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'notice').maybeSingle().then(({ data }) => { setText(data?.value || ''); setLoaded(true) })
+  }, [])
+  async function save() {
+    const { error } = await supabase.from('app_settings').upsert({ key: 'notice', value: text.trim() || null, updated_at: new Date().toISOString() })
+    setMsg(error ? '저장 실패: ' + error.message : (text.trim() ? '공지 저장됨 (뷰어 상단에 표시)' : '공지 삭제됨'))
+  }
+  return (
+    <Card className="p-5">
+      <h2 className="text-sm font-semibold text-ink-900 mb-1">공지사항</h2>
+      <p className="text-xs text-ink-400 mb-3">모든 뷰어 화면 상단에 배너로 표시됩니다. 비우고 저장하면 내려갑니다.</p>
+      {msg && <p className="mb-2 text-xs text-ink-500">{msg}</p>}
+      <textarea value={text} onChange={(e) => setText(e.target.value)} disabled={!loaded} rows={3} placeholder="예: 6월 마감은 6/30까지 입력 바랍니다."
+        className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand" />
+      <div className="mt-2"><button onClick={save} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-dark">저장</button></div>
+    </Card>
+  )
+}
+
 export default function Admin() {
   const [groups, setGroups] = useState([])
   const loadGroups = () =>
@@ -18,6 +41,7 @@ export default function Admin() {
         <p className="text-sm text-ink-500">관리자 전용</p>
       </header>
       <UploadPanel />
+      <NoticePanel />
       <GroupPanel groups={groups} reload={loadGroups} />
       <RepPanel groups={groups} />
     </div>
@@ -72,15 +96,21 @@ function GroupPanel({ groups, reload }) {
     const { error } = await supabase.from('groups').delete().eq('id', id)
     setMsg(error ? '삭제 실패: ' + error.message : '삭제됨'); reload()
   }
+  async function rename(g, v) {
+    const nv = v.trim()
+    if (!nv || nv === g.name) return
+    const { error } = await supabase.from('groups').update({ name: nv }).eq('id', g.id)
+    setMsg(error ? '변경 실패: ' + error.message : `그룹명 '${g.name}' → '${nv}' 변경되었습니다`); reload()
+  }
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">그룹 관리</h2>
-      <p className="text-xs text-ink-400 mb-3">여기서 추가한 그룹이 담당자 그룹 드랍다운에 바로 나옵니다.</p>
+      <p className="text-xs text-ink-400 mb-3">그룹명을 클릭해 바로 수정할 수 있습니다. 여기서 추가한 그룹이 담당자 드랍다운에 나옵니다.</p>
       {msg && <p className="mb-2 text-xs text-ink-500">{msg}</p>}
       <div className="flex flex-wrap items-center gap-2 mb-3">
         {groups.map((g) => (
           <span key={g.id} className="inline-flex items-center gap-1 rounded-lg bg-canvas px-2.5 py-1 text-sm text-ink-700">
-            {g.name}
+            <input defaultValue={g.name} onBlur={(e) => rename(g, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} className="w-20 bg-transparent text-ink-700 border-b border-transparent focus:border-brand focus:outline-none" />
             <button onClick={() => remove(g.id)} className="text-ink-400 hover:text-lost">×</button>
           </span>
         ))}

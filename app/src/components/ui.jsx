@@ -19,10 +19,10 @@ export function KpiCard({ label, value, sub }) {
 }
 
 const STATUS_STYLE = {
-  '진행중': 'bg-brand text-white',
+  '진행중': 'bg-[#2563EB] text-white',
   '종료(성공)': 'bg-[#2F5597] text-white',
-  '종료(실패)': 'bg-lost text-white',
-  '보류/연기': 'bg-violet-500 text-white',
+  '종료(실패)': 'bg-[#DC2626] text-white',
+  '보류/연기': 'bg-[#EC6FA6] text-white',
 }
 export function StatusPill({ status }) {
   return <span className={`inline-block rounded px-1.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[status] || 'bg-ink-400 text-white'}`}>{status || '-'}</span>
@@ -129,9 +129,9 @@ export function DealCard({ deal }) {
         <span className="text-[11px] text-ink-400 tnum">
           {(deal.start_date || '').replaceAll('-', '.')} ~ {(deal.end_date || '').replaceAll('-', '.')}
         </span>
-        <span className="text-xs text-ink-500">
+        <span className="text-xs text-ink-600">
           {deal.product ? deal.product + ' ' : ''}
-          <span className="font-semibold text-ink-900 tnum">{won(deal.display_amount)}</span>
+          <span className="font-semibold text-ink-600 tnum">{won(deal.display_amount)}</span>
         </span>
       </div>
     </Card>
