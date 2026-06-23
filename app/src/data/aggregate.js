@@ -160,9 +160,9 @@ export function rates(rows) {
   const total = rows.length
   const c = (s) => rows.filter((r) => r.status === s).length
   const won = c('종료(성공)'), lost = c('종료(실패)'), prog = c('진행중'), hold = c('보류/연기')
-  const base = prog + won + lost // 보류/연기 제외 → 진행+성공+실패 = 100%
-  const p = (n) => (base ? (n / base) * 100 : 0)
-  return { total, won, lost, prog, hold, base, progRate: p(prog), winRate: p(won), lostRate: p(lost) }
+  const p = (n) => (total ? (n / total) * 100 : 0)
+  // 진행 + 성공 + 실패(보류 포함) = 100% (전체 분모)
+  return { total, won, lost, prog, hold, progRate: p(prog), winRate: p(won), lostRate: p(lost + hold) }
 }
 // 날짜 필드 기준 월별 카운트
 export function countByMonth(rows, field) {

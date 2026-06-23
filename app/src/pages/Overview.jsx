@@ -85,7 +85,7 @@ export default function Overview() {
 
       {/* 2. 영업기회 현황 */}
       <Card className="overflow-hidden">
-        <div className="px-5 pt-5 pb-3 text-base font-bold text-ink-900">영업기회 현황 <span className="text-xs font-normal text-ink-400">(률: 진행+성공+실패=100%, 보류 제외)</span></div>
+        <div className="px-5 pt-5 pb-3 text-base font-bold text-ink-900">영업기회 현황 <span className="text-xs font-normal text-ink-400">(진행+성공+실패=100% · 실패율은 보류 포함)</span></div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[420px]">
             <thead>
