@@ -5,7 +5,7 @@ import { DealCard, Select } from '../components/ui'
 import { num } from '../lib/format'
 import { Loading, ErrorBox } from './Overview'
 
-const STATUS_ORDER = { '종료(성공)': 0, '보류/연기': 1, '종료(실패)': 2, '진행중': 3 }
+const STATUS_ORDER = { '진행중': 0, '보류/연기': 1, '종료(실패)': 2, '종료(성공)': 3 }
 const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status: 'all', period: 'all', q: '' }
 
 export default function Accounts() {

@@ -38,7 +38,7 @@ function RepMatrix({ m }) {
         <tbody className="divide-y divide-line">
           {m.reps.map((r) => (
             <tr key={r.rep} className="hover:bg-canvas">
-              <td className="px-4 py-2 font-medium text-ink-800 whitespace-nowrap">{r.rep}{r.group ? <span className="text-ink-400 font-normal"> · {r.group}</span> : ''}</td>
+              <td className="px-4 py-2 font-medium text-ink-800 whitespace-nowrap">{r.rep}{r.group ? <span className="text-ink-400 font-normal text-xs"> · {r.group}</span> : ''}</td>
               {m.periods.map((p) => <td key={p} className="px-2 py-2 text-right">{cell(r.by[p] || 0)}</td>)}
               <td className="px-4 py-2 text-right font-bold text-brand tnum">{r.total}</td>
             </tr>

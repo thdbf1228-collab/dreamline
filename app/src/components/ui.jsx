@@ -19,7 +19,7 @@ export function KpiCard({ label, value, sub }) {
 }
 
 const STATUS_STYLE = {
-  '진행중': 'bg-[#2563EB] text-white',
+  '진행중': 'bg-[#E8820C] text-white',
   '종료(성공)': 'bg-[#2F5597] text-white',
   '종료(실패)': 'bg-[#DC2626] text-white',
   '보류/연기': 'bg-[#EC6FA6] text-white',

@@ -78,7 +78,7 @@ export default function Contracts() {
                     <tr key={c.id} className="hover:bg-canvas">
                       <td className="px-5 py-2.5 font-medium text-ink-800 truncate" title={c.account_name}>{c.account_name || '-'}</td>
                       <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}</td>
-                      <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}{c.group_name ? <span className="text-ink-400"> · {c.group_name}</span> : ''}</td>
+                      <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}{c.group_name ? <span className="text-ink-400 text-xs"> · {c.group_name}</span> : ''}</td>
                       <td className="px-3 py-2.5 text-ink-400 tnum">{(c.contract_date || '').replaceAll('-', '.')}</td>
                       <td className="px-5 py-2.5 text-right font-bold text-ink-900 tnum">{won(c.supply_amount)}</td>
                     </tr>
