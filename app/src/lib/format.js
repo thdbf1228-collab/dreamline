@@ -34,10 +34,8 @@ export function parseDate(v) {
 // 천원 단위 금액 -> 사람이 읽는 한글 표기
 export function won(amountInThousand) {
   const n = Number(amountInThousand) || 0
-  const w = n * 1000 // 원
-  if (Math.abs(w) >= 1e8) return (w / 1e8).toFixed(w % 1e8 === 0 ? 0 : 1) + '억'
-  if (Math.abs(w) >= 1e4) return Math.round(w / 1e4).toLocaleString() + '만'
-  return w.toLocaleString() + '원'
+  const m = n / 1000 // 천원 → 백만원
+  return m.toLocaleString('ko-KR', { maximumFractionDigits: 2 }) + '백만'
 }
 
 export function num(n) {

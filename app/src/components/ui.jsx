@@ -106,7 +106,9 @@ export function DealCard({ deal }) {
       <div className="flex items-center gap-1.5 mb-2">
         <StatusPill status={deal.status} />
         {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
-        {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
+        {deal.is_stale
+          ? <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>
+          : <span className="rounded px-1.5 py-0.5 text-[11px] font-medium invisible" aria-hidden="true">정체</span>}
         {/* 정체 뒤부터 남은 폭 전부 — 관리자 메모 */}
         {isAdmin ? (
           <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
