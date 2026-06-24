@@ -107,12 +107,12 @@ export function DealCard({ deal }) {
         <StatusPill status={deal.status} />
         {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
         {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
-        {/* 정체 뒤 남는 공간에 관리자 메모 */}
+        {/* 정체 뒤부터 남은 폭 전부 — 관리자 메모 */}
         {isAdmin ? (
           <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
-            className="ml-auto w-32 shrink rounded-md border border-dashed border-line bg-canvas px-2 py-0.5 text-[11px] text-ink-800 focus:border-brand focus:bg-paper" />
+            className="ml-1 flex-1 min-w-0 rounded-md border border-dashed border-line bg-canvas px-2 py-0.5 text-xs text-ink-800 focus:border-brand focus:bg-paper" />
         ) : (deal.admin_memo ? (
-          <div className="ml-auto min-w-0 max-w-[60%] truncate rounded-md px-2 py-0.5 text-[11px] font-bold memo-flash" title={deal.admin_memo}>{deal.admin_memo}</div>
+          <div className="ml-1 flex-1 min-w-0 truncate rounded-md px-2 py-0.5 text-xs font-bold memo-flash" title={deal.admin_memo}>{deal.admin_memo}</div>
         ) : null)}
       </div>
       <div className="text-sm font-semibold text-ink-900 leading-snug line-clamp-2 min-h-[2.5rem]" title={deal.title}>{deal.title}</div>
