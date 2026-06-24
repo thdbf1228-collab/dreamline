@@ -13,7 +13,7 @@ export default function Accounts() {
   const [f, setF] = useState(INIT)
 
   const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].sort(), [rows])
-  const reps = useMemo(() => [...new Set((rows || []).map((r) => r.rep_name).filter(Boolean))].sort(), [rows])
+  const reps = useMemo(() => [...new Set((rows || []).filter((r) => f.group === 'all' || r.group_name === f.group).map((r) => r.rep_name).filter(Boolean))].sort(), [rows, f.group])
   const periods = useMemo(() => [...new Set((rows || []).map((r) => (r.start_date || '').slice(0, 7)).filter(Boolean))].sort().reverse(), [rows])
   const filtered = useMemo(() => {
     let out = rows ? filterDeals(rows, { ...f, status: f.status === '정체' ? 'all' : f.status }) : []
@@ -35,8 +35,8 @@ export default function Accounts() {
 
       <div className="flex flex-wrap items-center gap-2">
         <input value={f.q} onChange={(e) => set('q')(e.target.value)} placeholder="거래처 · 영업기회 · 담당자 검색"
-          className="w-56 rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
-        <Select value={f.group} onChange={set('group')}>
+          className="flex-1 min-w-[12rem] rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
+        <Select value={f.group} onChange={(v) => setF((p) => ({ ...p, group: v, rep: 'all' }))}>
           <option value="all">그룹 전체</option>{groups.map((g) => <option key={g} value={g}>{g}</option>)}
         </Select>
         <Select value={f.rep} onChange={set('rep')}>

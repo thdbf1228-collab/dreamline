@@ -103,17 +103,19 @@ export function DealCard({ deal }) {
   }
   return (
     <Card className="p-4 flex flex-col h-full">
+      <div className="mb-2 min-h-[1.9rem]">
+        {isAdmin ? (
+          <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
+            className="w-full rounded-md border border-dashed border-line bg-canvas px-2 py-1 text-xs text-ink-800 focus:border-brand focus:bg-paper" />
+        ) : (deal.admin_memo ? (
+          <div className="rounded-md px-2 py-1 text-xs font-bold memo-flash">{deal.admin_memo}</div>
+        ) : null)}
+      </div>
       <div className="flex items-center gap-1.5 mb-2">
         <StatusPill status={deal.status} />
         {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
         {deal.is_stale && <span className="rounded px-1.5 py-0.5 text-[11px] font-medium bg-amber-100 text-stale">정체</span>}
       </div>
-      {isAdmin ? (
-        <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
-          className="mb-2 w-full rounded-md border border-dashed border-line bg-canvas px-2 py-1 text-xs text-ink-800 focus:border-brand focus:bg-paper" />
-      ) : (deal.admin_memo ? (
-        <div className="mb-2 rounded-md px-2 py-1 text-xs font-bold memo-flash">{deal.admin_memo}</div>
-      ) : null)}
       <div className="text-sm font-semibold text-ink-900 leading-snug line-clamp-2 min-h-[2.5rem]" title={deal.title}>{deal.title}</div>
       <div className="mt-1 flex items-center justify-between text-xs">
         <span className="text-ink-500 truncate">{deal.account_name}</span>

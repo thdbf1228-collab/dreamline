@@ -78,7 +78,7 @@ export default function Overview() {
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(1, groups.length)}, minmax(0, 1fr))` }}>
         {groups.map((g) => (
           <Card key={g.name} className="p-4">
-            <div className="text-base font-bold text-ink-900">{g.name} <span className="text-xs font-normal text-ink-400">· {roster[g.name]?.size || 0}명</span></div>
+            <div className="text-base font-bold text-ink-900">{g.name} <span className="text-xs font-normal text-ink-400">({roster[g.name]?.size || 0}명)</span></div>
             <div className="mt-2 flex items-baseline justify-between text-sm text-ink-500">
               <span>영업기회</span><span className="text-lg font-bold tnum" style={{ color: C_OPP }}>{g.count}건</span>
             </div>
