@@ -58,6 +58,7 @@ export default function Activity() {
   const { rows: opps } = useOpportunities()
   const { rows: acts } = useActivities()
   const [year, setYear] = useState('all')
+  const [grp, setGrp] = useState('all')
 
   const years = useMemo(() => {
     const s = new Set()
@@ -65,9 +66,16 @@ export default function Activity() {
     for (const a of acts) if (a.activity_date) s.add(a.activity_date.slice(0, 4))
     return [...s].sort().reverse()
   }, [opps, acts])
+  const groups = useMemo(() => {
+    const s = new Set()
+    for (const r of opps || []) if (r.group_name) s.add(r.group_name)
+    for (const a of acts) if (a.group_name) s.add(a.group_name)
+    return [...s].sort()
+  }, [opps, acts])
+  const byGrp = (arr) => (grp === 'all' ? arr : arr.filter((r) => r.group_name === grp))
 
-  const oppM = useMemo(() => matrix(opps || [], 'start_date', year), [opps, year])
-  const actM = useMemo(() => matrix(acts, 'activity_date', year), [acts, year])
+  const oppM = useMemo(() => matrix(byGrp(opps || []), 'start_date', year), [opps, year, grp])
+  const actM = useMemo(() => matrix(byGrp(acts), 'activity_date', year), [acts, year, grp])
 
   return (
     <div className="space-y-5">
@@ -76,10 +84,16 @@ export default function Activity() {
           <h1 className="text-xl font-bold text-ink-900">영업사원별 현황</h1>
           <p className="text-sm text-ink-500">월별 · 합계순 · 미배정 제외</p>
         </div>
-        <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
-          <option value="all">전체 (년도)</option>
-          {years.map((y) => <option key={y} value={y}>{y}년</option>)}
-        </select>
+        <div className="flex items-center gap-2">
+          <select value={grp} onChange={(e) => setGrp(e.target.value)} className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
+            <option value="all">그룹 전체</option>
+            {groups.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+          <select value={year} onChange={(e) => setYear(e.target.value)} className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
+            <option value="all">전체 (년도)</option>
+            {years.map((y) => <option key={y} value={y}>{y}년</option>)}
+          </select>
+        </div>
       </header>
 
       <Card className="overflow-hidden">
