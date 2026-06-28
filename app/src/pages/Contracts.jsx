@@ -24,17 +24,34 @@ export default function Contracts() {
     (grp === 'all' || c.group_name === grp)
   ), [base, year, mon, grp])
 
-  const accEm = useMemo(() => Math.min(16, Math.max(6, ...valid.map((c) => (c.account_name || '').length))) + 1, [valid])
+  // (B) 영업기회당 1건 — 같은 영업기회 계약은 금액 합산 + 최신 계약일 1줄. 영업기회 없는 건은 개별 유지.
+  const merged = useMemo(() => {
+    const byOpp = new Map(); const out = []
+    for (const c of valid) {
+      const oid = c.opportunity_external_id
+      if (oid == null || oid === '') { out.push({ ...c }); continue }
+      if (!byOpp.has(oid)) byOpp.set(oid, [])
+      byOpp.get(oid).push(c)
+    }
+    for (const [, list] of byOpp) {
+      const latest = list.reduce((a, b) => ((a.contract_date || '') >= (b.contract_date || '') ? a : b))
+      const sum = list.reduce((s, c) => s + (Number(c.supply_amount) || 0), 0)
+      out.push({ ...latest, supply_amount: sum, _merged: list.length })
+    }
+    return out
+  }, [valid])
+
+  const accEm = useMemo(() => Math.min(16, Math.max(6, ...merged.map((c) => (c.account_name || '').length))) + 1, [merged])
 
   const months = useMemo(() => {
     const m = new Map()
-    for (const c of valid) { const k = c.contract_date.slice(0, 7); if (!m.has(k)) m.set(k, []); m.get(k).push(c) }
+    for (const c of merged) { const k = c.contract_date.slice(0, 7); if (!m.has(k)) m.set(k, []); m.get(k).push(c) }
     return [...m.entries()].map(([month, list]) => ({
       month,
       list: list.sort((a, b) => (Number(b.supply_amount) || 0) - (Number(a.supply_amount) || 0)),
       sum: list.reduce((s, c) => s + (Number(c.supply_amount) || 0), 0),
     })).sort((a, b) => b.month.localeCompare(a.month))
-  }, [valid])
+  }, [merged])
 
   if (rows === null) return <Loading />
 
@@ -42,7 +59,7 @@ export default function Contracts() {
     <div className="space-y-5">
       <header>
         <h1 className="text-xl font-bold text-ink-900">계약</h1>
-        <p className="text-sm text-ink-500">계약일 {FROM.replaceAll('-', '.')} 이후 · {num(valid.length)}건 · 금액순</p>
+        <p className="text-sm text-ink-500">계약일 {FROM.replaceAll('-', '.')} 이후 · 영업기회당 1건 · {num(merged.length)}건 · 금액순</p>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -77,7 +94,7 @@ export default function Contracts() {
                   {m.list.map((c) => (
                     <tr key={c.id} className="hover:bg-canvas">
                       <td className="px-5 py-2.5 font-medium text-ink-800 truncate" title={c.account_name}>{c.account_name || '-'}</td>
-                      <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}</td>
+                      <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}{c._merged > 1 ? <span className="ml-1 rounded bg-canvas px-1 text-[10px] text-ink-400">{c._merged}건 합산</span> : ''}</td>
                       <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}{c.group_name ? <span className="text-ink-400 text-xs"> · {c.group_name}</span> : ''}</td>
                       <td className="px-3 py-2.5 text-ink-400 tnum">{(c.contract_date || '').replaceAll('-', '.')}</td>
                       <td className="px-5 py-2.5 text-right font-bold text-ink-900 tnum">{won(c.supply_amount)}</td>
