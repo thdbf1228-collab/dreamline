@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null) // {role, must_change_password}
   const [loading, setLoading] = useState(true)
+  const [recovery, setRecovery] = useState(false)
 
   async function loadProfile(uid) {
     if (!uid) return setProfile(null)
@@ -20,7 +21,8 @@ export function AuthProvider({ children }) {
       await loadProfile(data.session?.user?.id)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(s)
       loadProfile(s?.user?.id)
     })
@@ -34,6 +36,14 @@ export function AuthProvider({ children }) {
     isAdmin: profile?.role === 'admin',
     mustChange: !!profile?.must_change_password,
     loading,
+    recovery,
+    clearRecovery: () => setRecovery(false),
+    resetPassword: async (email) => {
+      const { data, error } = await supabase.functions.invoke('forgot-password', { body: { email } })
+      if (error) return { error }
+      if (data?.error) return { error: { message: data.error } }
+      return { error: null, message: data?.message }
+    },
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signOut: () => supabase.auth.signOut(),
     // 본인 비밀번호 변경 + 강제변경 플래그 해제

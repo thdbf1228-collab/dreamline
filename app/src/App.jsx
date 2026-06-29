@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import Login from './components/Login'
 import ForcedPasswordChange from './components/ForcedPasswordChange'
+import SetNewPassword from './components/SetNewPassword'
 import Layout from './components/Layout'
 import Overview from './pages/Overview'
 import Accounts from './pages/Accounts'
@@ -24,8 +25,9 @@ function AdminGate() {
 }
 
 function Gate() {
-  const { loading } = useAuth()
+  const { loading, recovery } = useAuth()
   if (loading) return <div className="min-h-screen grid place-items-center text-sm text-ink-400">로딩 중…</div>
+  if (recovery) return <SetNewPassword />
   return (
     <Layout>
       <Routes>

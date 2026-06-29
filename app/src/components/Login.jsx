@@ -5,13 +5,21 @@ const KEY = 'dl_saved_id'
 const getSaved = () => { try { return localStorage.getItem(KEY) || '' } catch { return '' } }
 
 export default function Login() {
-  const { signIn } = useAuth()
+  const { signIn, resetPassword } = useAuth()
   const saved = getSaved()
   const [email, setEmail] = useState(saved)
   const [remember, setRemember] = useState(!!saved)
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [resetMsg, setResetMsg] = useState('')
+  async function sendReset() {
+    const id = email.trim() || 'jiyoung76@dreamline.co.kr'
+    if (!confirm(`관리자 임시 비밀번호를 발송하시겠습니까?\n기존 비밀번호는 즉시 무효화됩니다.`)) return
+    setResetMsg('전송 중…')
+    const { error } = await resetPassword(id)
+    setResetMsg(error ? '발송 실패: ' + error.message : '임시 비밀번호를 메일로 보냈습니다. 메일함(스팸함 포함)을 확인하세요.')
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -49,7 +57,8 @@ export default function Login() {
           <button type="submit" disabled={busy} className="w-full rounded-lg bg-brand py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
             {busy ? '로그인 중…' : '로그인'}
           </button>
-          <p className="text-center text-[11px] text-ink-400">비밀번호 분실 시 관리자에게 초기화를 요청하세요.</p>
+          <button type="button" onClick={sendReset} className="w-full text-center text-xs text-brand hover:underline">비밀번호 찾기 (임시 비밀번호 메일 발송)</button>
+          {resetMsg && <p className="text-center text-[11px] text-ink-500">{resetMsg}</p>}
         </form>
       </div>
     </div>

@@ -50,26 +50,30 @@ export default function Admin() {
 
 function UploadPanel() {
   const oppRef = useRef(); const conRef = useRef(); const actRef = useRef()
-  const [busy, setBusy] = useState(false); const [logs, setLogs] = useState([])
+  const [busy, setBusy] = useState(false); const [logs, setLogs] = useState([]); const [replace, setReplace] = useState(false)
   const log = (m) => setLogs((l) => [...l, m])
   async function run() {
     const o = oppRef.current?.files?.[0]; const c = conRef.current?.files?.[0]; const ac = actRef.current?.files?.[0]
     if (!o && !c && !ac) return log('업로드할 파일을 선택하세요.')
     setBusy(true); setLogs([])
-    try { if (o) await ingestOpportunities(o, log); if (c) await ingestContracts(c, log); if (ac) await ingestActivities(ac, log); log('✅ 완료.') }
+    try { if (o) await ingestOpportunities(o, log, replace); if (c) await ingestContracts(c, log, replace); if (ac) await ingestActivities(ac, log, replace); log('✅ 완료.') }
     catch (e) { log('❌ ' + e.message) } finally { setBusy(false) }
   }
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">주간 데이터 업로드</h2>
-      <p className="text-xs text-ink-400 mb-4">ID 기준 갱신 (영업기회 → 계약 → 영업활동 순). 중복 없이 누적·갱신. 셋 중 아무거나 올려도 됨.</p>
+      <p className="text-xs text-ink-400 mb-4">영업기회 → 계약 → 영업활동 순. 셋 중 아무거나 올려도 됨.</p>
       <div className="grid md:grid-cols-3 gap-4">
         <FileField label="영업기회" inputRef={oppRef} />
         <FileField label="계약" inputRef={conRef} />
         <FileField label="영업활동" inputRef={actRef} />
       </div>
-      <button onClick={run} disabled={busy} className="mt-4 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
-        {busy ? '처리 중…' : '업로드 · 반영'}
+      <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer select-none">
+        <input type="checkbox" checked={replace} onChange={(e) => setReplace(e.target.checked)} className="w-4 h-4 accent-brand" />
+        <span className={replace ? 'font-semibold text-lost' : 'text-ink-700'}>전체 교체 (올린 종류의 기존 데이터를 지우고 이 파일로 덮어쓰기)</span>
+      </label>
+      <button onClick={run} disabled={busy} className="mt-3 block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+        {busy ? '처리 중…' : (replace ? '전체 교체 업로드' : '업로드 · 반영(누적)')}
       </button>
       {logs.length > 0 && <div className="mt-4 rounded-lg bg-canvas p-3 text-xs text-ink-700 space-y-1 font-mono">{logs.map((l, i) => <div key={i}>{l}</div>)}</div>}
     </Card>

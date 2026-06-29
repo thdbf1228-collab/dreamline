@@ -17,8 +17,9 @@ function uniqBy(arr, key) {
 }
 
 // ── 영업기회 적재 ──────────────────────────────────────────
-export async function ingestOpportunities(file, log = () => {}) {
+export async function ingestOpportunities(file, log = () => {}, replace = false) {
   const rows = (await readRows(file)).filter((r) => r['영업기회ID'] !== '')
+  if (replace && rows.length === 0) throw new Error('영업기회 파일에 데이터가 없어 전체 교체를 중단했습니다.')
   log(`영업기회 ${rows.length}행 읽음`)
 
   // 1) 거래처(고객사) upsert
@@ -80,6 +81,7 @@ export async function ingestOpportunities(file, log = () => {}) {
     }
   })
 
+  if (replace) { const { error: de } = await supabase.from('opportunities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업기회 삭제 실패: ' + de.message); log('기존 영업기회 전체 삭제 후 교체') }
   const { error } = await supabase.from('opportunities').upsert(opps, { onConflict: 'external_id' })
   if (error) throw new Error('영업기회 upsert 실패: ' + error.message)
   log(`영업기회 ${opps.length}건 반영 완료`)
@@ -87,8 +89,9 @@ export async function ingestOpportunities(file, log = () => {}) {
 }
 
 // ── 계약 적재 (영업기회에 없는 건은 버림) ──────────────────
-export async function ingestContracts(file, log = () => {}) {
+export async function ingestContracts(file, log = () => {}, replace = false) {
   const rows = (await readRows(file)).filter((r) => r['계약ID'] !== '')
+  if (replace && rows.length === 0) throw new Error('계약 파일에 데이터가 없어 전체 교체를 중단했습니다.')
   log(`계약 ${rows.length}행 읽음`)
 
   // 기준: 현재 영업기회 external_id 집합
@@ -131,6 +134,7 @@ export async function ingestContracts(file, log = () => {}) {
   }
 
   if (contracts.length) {
+    if (replace) { const { error: de } = await supabase.from('contracts').delete().not('id', 'is', null); if (de) throw new Error('기존 계약 삭제 실패: ' + de.message); log('기존 계약 전체 삭제 후 교체') }
     const { error } = await supabase.from('contracts').upsert(contracts, { onConflict: 'external_id' })
     if (error) throw new Error('계약 upsert 실패: ' + error.message)
   }
@@ -139,8 +143,9 @@ export async function ingestContracts(file, log = () => {}) {
 }
 
 // ── 영업활동 적재 ──────────────────────────────────────────
-export async function ingestActivities(file, log = () => {}) {
+export async function ingestActivities(file, log = () => {}, replace = false) {
   const rows = (await readRows(file)).filter((r) => r['영업활동ID'] !== '')
+  if (replace && rows.length === 0) throw new Error('영업활동 파일에 데이터가 없어 전체 교체를 중단했습니다.')
   log(`영업활동 ${rows.length}행 읽음`)
 
   // 담당자 — 없는 이름만 추가(기존 그룹배정 보존)
@@ -171,6 +176,7 @@ export async function ingestActivities(file, log = () => {}) {
     }
   })
 
+  if (replace) { const { error: de } = await supabase.from('activities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업활동 삭제 실패: ' + de.message); log('기존 영업활동 전체 삭제 후 교체') }
   const { error } = await supabase.from('activities').upsert(acts, { onConflict: 'external_id' })
   if (error) throw new Error('영업활동 upsert 실패: ' + error.message)
   log(`영업활동 ${acts.length}건 반영 완료`)
