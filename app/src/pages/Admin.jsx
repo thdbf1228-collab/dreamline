@@ -198,7 +198,7 @@ function RepPanel({ groups }) {
   }
   async function toggleExclude(rep) {
     const next = !rep.excluded
-    if (next && !confirm(`${rep.name} 카운팅 제외할까요?\n전체·파이프라인·계약·활동 모든 화면 집계에서 빠집니다. (다시 살리기 가능)`)) return
+    if (next && !confirm(`${rep.name} 카운팅 제외할까요?\n전체·파이프라인·활동 화면 집계에서 빠집니다. (계약탭은 그대로 유지 · 다시 살리기 가능)`)) return
     const { error } = await supabase.from('reps').update({ excluded: next }).eq('id', rep.id)
     setMsg(error ? '실패: ' + error.message : `${rep.name} ${next ? '카운팅 제외됨' : '카운팅 복구됨'}`); load()
   }
