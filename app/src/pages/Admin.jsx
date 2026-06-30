@@ -62,7 +62,7 @@ function UploadPanel() {
   return (
     <Card className="p-5">
       <h2 className="text-sm font-semibold text-ink-900 mb-1">주간 데이터 업로드</h2>
-      <p className="text-xs text-ink-400 mb-4">영업기회 → 계약 → 영업활동 순. 셋 중 아무거나 올려도 됨.</p>
+      <p className="text-xs text-ink-400 mb-4">필요한 것만 올려도 됩니다 (예: 영업활동만). 빈 칸은 건드리지 않습니다. 여러 개를 함께 올리면 영업기회 → 계약 → 영업활동 순으로 처리됩니다.</p>
       <div className="grid md:grid-cols-3 gap-4">
         <FileField label="영업기회" inputRef={oppRef} />
         <FileField label="계약" inputRef={conRef} />

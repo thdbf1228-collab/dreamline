@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
+import { useReps } from '../data/useReps'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
 
 const mLabel = (k) => `${k.slice(0, 4)}.${k.slice(5, 7)}`
 
 // 영업사원 × 월 매트릭스 (미배정 제외, 합계순)
-function matrix(rows, dateField, year) {
+function matrix(rows, dateField, year, rosterReps = []) {
   const filtered = rows.filter((r) => r.group_name && r.rep_name && (year === 'all' || (r[dateField] || '').slice(0, 4) === year))
   const periods = [...new Set(filtered.map((r) => (r[dateField] || '').slice(0, 7)).filter(Boolean))].sort()
   const pset = new Set(periods)
   const map = new Map()
+  for (const rr of rosterReps) if (!map.has(rr.rep)) map.set(rr.rep, { group: rr.group, by: {} }) // 명단 전원 시드(0건 표기)
   for (const r of filtered) {
     const p = (r[dateField] || '').slice(0, 7); if (!pset.has(p)) continue
     if (!map.has(r.rep_name)) map.set(r.rep_name, { group: r.group_name, by: {} })
@@ -57,6 +59,7 @@ function RepMatrix({ m }) {
 export default function Activity() {
   const { rows: opps } = useOpportunities()
   const { rows: acts } = useActivities()
+  const { reps: repList } = useReps()
   const [year, setYear] = useState('all')
   const [grp, setGrp] = useState('all')
 
@@ -68,14 +71,18 @@ export default function Activity() {
   }, [opps, acts])
   const groups = useMemo(() => {
     const s = new Set()
+    for (const r of repList || []) if (r.group_name) s.add(r.group_name)
     for (const r of opps || []) if (r.group_name) s.add(r.group_name)
     for (const a of acts) if (a.group_name) s.add(a.group_name)
     return [...s].sort()
-  }, [opps, acts])
+  }, [repList, opps, acts])
   const byGrp = (arr) => (grp === 'all' ? arr : arr.filter((r) => r.group_name === grp))
+  const rosterReps = useMemo(() => (repList || [])
+    .filter((r) => r.group_name && (grp === 'all' || r.group_name === grp))
+    .map((r) => ({ rep: r.rep_name, group: r.group_name })), [repList, grp])
 
-  const oppM = useMemo(() => matrix(byGrp(opps || []), 'start_date', year), [opps, year, grp])
-  const actM = useMemo(() => matrix(byGrp(acts), 'activity_date', year), [acts, year, grp])
+  const oppM = useMemo(() => matrix(byGrp(opps || []), 'start_date', year, rosterReps), [opps, year, grp, rosterReps])
+  const actM = useMemo(() => matrix(byGrp(acts), 'activity_date', year, rosterReps), [acts, year, grp, rosterReps])
 
   return (
     <div className="space-y-5">

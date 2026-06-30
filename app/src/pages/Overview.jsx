@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
+import { useReps } from '../data/useReps'
 import { rates } from '../data/aggregate'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
@@ -8,9 +9,10 @@ import { num } from '../lib/format'
 const C_OPP = '#2F5597' // 영업기회 네이비
 const C_ACT = '#D98E33' // 영업활동 앰버
 
-function repsOf(rows) {
+function repBars(dataRows, seedNames) {
   const m = new Map()
-  for (const r of rows) { if (!r.rep_name) continue; m.set(r.rep_name, (m.get(r.rep_name) || 0) + 1) }
+  for (const name of seedNames) m.set(name, 0) // 명단 전원 0으로 시드 → 0건도 표기
+  for (const r of dataRows) { if (!r.rep_name) continue; m.set(r.rep_name, (m.get(r.rep_name) || 0) + 1) }
   return [...m.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
 }
 const countStatus = (rows, s) => rows.filter((r) => r.status === s).length
@@ -18,20 +20,24 @@ const countStatus = (rows, s) => rows.filter((r) => r.status === s).length
 export default function Overview() {
   const { rows, error, loading } = useOpportunities()
   const { rows: acts } = useActivities()
+  const { reps: repList } = useReps()
   const [month, setMonth] = useState('all')
 
   // 고정 그룹 목록(미배정 제외) — 데이터 없는 달에도 항상 표시 (6월 오류 방지)
   const allGroups = useMemo(() => {
     const s = new Set()
+    for (const r of repList || []) if (r.group_name) s.add(r.group_name)
     for (const r of rows || []) if (r.group_name) s.add(r.group_name)
     return [...s].sort()
-  }, [rows])
+  }, [repList, rows])
 
-  const roster = useMemo(() => {
+  const rosterByGroup = useMemo(() => {
     const m = {}
+    for (const r of repList || []) { if (!r.group_name) continue; (m[r.group_name] = m[r.group_name] || new Set()).add(r.rep_name) }
     for (const r of rows || []) { if (!r.group_name || !r.rep_name) continue; (m[r.group_name] = m[r.group_name] || new Set()).add(r.rep_name) }
     return m
-  }, [rows])
+  }, [repList, rows])
+  const rosterNames = useMemo(() => (repList || []).filter((r) => r.group_name).map((r) => r.rep_name), [repList])
 
   const monthsAvail = useMemo(() => {
     const s = new Set()
@@ -57,8 +63,8 @@ export default function Overview() {
   const oppGroupBars = groups.map((g) => ({ name: g.name, count: g.count }))
   const actGroupBars = groups.map((g) => ({ name: g.name, count: g.act }))
   // 담당자별 — 미배정 제외
-  const reps = repsOf(fOpp.filter((r) => r.group_name))
-  const actReps = repsOf(fActs.filter((a) => a.group_name))
+  const reps = repBars(fOpp.filter((r) => r.group_name), rosterNames)
+  const actReps = repBars(fActs.filter((a) => a.group_name), rosterNames)
   const periodLabel = month === 'all' ? '2026.1~ 누적' : `${month.slice(0, 4)}.${month.slice(5, 7)}`
 
   return (
@@ -78,7 +84,7 @@ export default function Overview() {
       <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.max(1, groups.length)}, minmax(0, 1fr))` }}>
         {groups.map((g) => (
           <Card key={g.name} className="p-4">
-            <div className="text-base font-bold text-ink-900">{g.name} <span className="text-xs font-normal text-ink-400">({roster[g.name]?.size || 0}명)</span></div>
+            <div className="text-base font-bold text-ink-900">{g.name} <span className="text-xs font-normal text-ink-400">({rosterByGroup[g.name]?.size || 0}명)</span></div>
             <div className="mt-2 flex items-baseline justify-between text-sm text-ink-500">
               <span>영업기회</span><span className="text-lg font-bold tnum" style={{ color: C_OPP }}>{g.count}건</span>
             </div>

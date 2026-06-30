@@ -51,10 +51,15 @@ Deno.serve(async (req) => {
       connection: { hostname: 'smtp.gmail.com', port: 465, tls: true, auth: { username: gmailUser, password: gmailPass } },
     })
     await client.send({
-      from: `DREAMLINE 영업기획팀 <${gmailUser}>`,
+      from: `DREAMLINE <${gmailUser}>`,
       to,
-      subject: '[DREAMLINE] 관리자 임시 비밀번호 안내',
-      content: `요청하신 임시 비밀번호입니다.\n\n임시 비밀번호: ${temp}\n\n로그인 후 즉시 새 비밀번호로 변경하세요. 기존 비밀번호는 무효화되었습니다.`,
+      subject: 'DREAMLINE - Temporary Password',
+      content: `[DREAMLINE] 임시 비밀번호 안내\n\n임시 비밀번호: ${temp}\n\n로그인 후 즉시 새 비밀번호로 변경하세요.\n기존 비밀번호는 무효화되었습니다.`,
+      html: `<div style="font-family:sans-serif;font-size:14px;line-height:1.7;color:#222">
+        <p>[DREAMLINE] 임시 비밀번호 안내</p>
+        <p>임시 비밀번호: <b style="font-size:20px;letter-spacing:1px">${temp}</b></p>
+        <p>로그인 후 즉시 새 비밀번호로 변경하세요. 기존 비밀번호는 무효화되었습니다.</p>
+      </div>`,
     })
     await client.close()
 
