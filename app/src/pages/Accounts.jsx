@@ -3,7 +3,7 @@ import { useOpportunities } from '../data/useOpportunities'
 import { STAGES, STATUSES, filterDeals } from '../data/aggregate'
 import { DealCard, Select } from '../components/ui'
 import { num } from '../lib/format'
-import { HIDDEN_GROUP } from '../data/useReps'
+import { isHiddenGroup } from '../data/useReps'
 import { Loading, ErrorBox } from './Overview'
 
 const STATUS_ORDER = { '진행중': 0, '보류/연기': 1, '종료(실패)': 2, '종료(성공)': 3 }
@@ -13,11 +13,11 @@ export default function Accounts() {
   const { rows, error, loading } = useOpportunities()
   const [f, setF] = useState(INIT)
 
-  const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].filter((g) => g !== HIDDEN_GROUP).sort(), [rows])
-  const reps = useMemo(() => [...new Set((rows || []).filter((r) => r.group_name !== HIDDEN_GROUP && (f.group === 'all' || r.group_name === f.group)).map((r) => r.rep_name).filter(Boolean))].sort(), [rows, f.group])
+  const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].filter((g) => !isHiddenGroup(g)).sort(), [rows])
+  const reps = useMemo(() => [...new Set((rows || []).filter((r) => !isHiddenGroup(r.group_name) && (f.group === 'all' || r.group_name === f.group)).map((r) => r.rep_name).filter(Boolean))].sort(), [rows, f.group])
   const periods = useMemo(() => [...new Set((rows || []).map((r) => (r.start_date || '').slice(0, 7)).filter(Boolean))].sort().reverse(), [rows])
   const filtered = useMemo(() => {
-    let out = rows ? filterDeals(rows.filter((r) => r.group_name !== HIDDEN_GROUP), { ...f, status: f.status === '정체' ? 'all' : f.status }) : []
+    let out = rows ? filterDeals(rows.filter((r) => !isHiddenGroup(r.group_name)), { ...f, status: f.status === '정체' ? 'all' : f.status }) : []
     if (f.status === '정체') out = out.filter((d) => d.is_stale)
     if (f.period !== 'all') out = out.filter((d) => (d.start_date || '').slice(0, 7) === f.period)
     return out.sort((a, b) => ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)) || (Number(b.display_amount) || 0) - (Number(a.display_amount) || 0))

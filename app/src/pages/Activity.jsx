@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
-import { useReps, HIDDEN_GROUP } from '../data/useReps'
+import { useReps, isHiddenGroup } from '../data/useReps'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
 
@@ -9,7 +9,7 @@ const mLabel = (k) => `${k.slice(0, 4)}.${k.slice(5, 7)}`
 
 // 영업사원 × 월 매트릭스 (미배정 제외, 합계순)
 function matrix(rows, dateField, year, rosterReps = []) {
-  const filtered = rows.filter((r) => r.group_name && r.group_name !== HIDDEN_GROUP && r.rep_name && (year === 'all' || (r[dateField] || '').slice(0, 4) === year))
+  const filtered = rows.filter((r) => r.group_name && !isHiddenGroup(r.group_name) && r.rep_name && (year === 'all' || (r[dateField] || '').slice(0, 4) === year))
   const periods = [...new Set(filtered.map((r) => (r[dateField] || '').slice(0, 7)).filter(Boolean))].sort()
   const pset = new Set(periods)
   const map = new Map()
@@ -74,7 +74,7 @@ export default function Activity() {
     for (const r of repList || []) if (r.group_name) s.add(r.group_name)
     for (const r of opps || []) if (r.group_name) s.add(r.group_name)
     for (const a of acts) if (a.group_name) s.add(a.group_name)
-    return [...s].filter((g) => g !== HIDDEN_GROUP).sort()
+    return [...s].filter((g) => !isHiddenGroup(g)).sort()
   }, [repList, opps, acts])
   const byGrp = (arr) => (grp === 'all' ? arr : arr.filter((r) => r.group_name === grp))
   const rosterReps = useMemo(() => (repList || [])

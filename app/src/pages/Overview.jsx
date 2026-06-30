@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
-import { useReps, HIDDEN_GROUP } from '../data/useReps'
+import { useReps, isHiddenGroup } from '../data/useReps'
 import { rates } from '../data/aggregate'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
@@ -28,13 +28,13 @@ export default function Overview() {
     const s = new Set()
     for (const r of repList || []) if (r.group_name) s.add(r.group_name)
     for (const r of rows || []) if (r.group_name) s.add(r.group_name)
-    return [...s].filter((g) => g !== HIDDEN_GROUP).sort()
+    return [...s].filter((g) => !isHiddenGroup(g)).sort()
   }, [repList, rows])
 
   const rosterByGroup = useMemo(() => {
     const m = {}
     for (const r of repList || []) { if (!r.group_name) continue; (m[r.group_name] = m[r.group_name] || new Set()).add(r.rep_name) }
-    for (const r of rows || []) { if (!r.group_name || r.group_name === HIDDEN_GROUP || !r.rep_name) continue; (m[r.group_name] = m[r.group_name] || new Set()).add(r.rep_name) }
+    for (const r of rows || []) { if (!r.group_name || isHiddenGroup(r.group_name) || !r.rep_name) continue; (m[r.group_name] = m[r.group_name] || new Set()).add(r.rep_name) }
     return m
   }, [repList, rows])
   const rosterNames = useMemo(() => (repList || []).filter((r) => r.group_name).map((r) => r.rep_name), [repList])
