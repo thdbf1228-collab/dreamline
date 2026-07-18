@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useContracts } from '../data/useContracts'
 import { Card, Select } from '../components/ui'
 import { won, num } from '../lib/format'
+import DrillModal from '../components/DrillModal'
 import { Loading } from './Overview'
 
 const FROM = '2026-01-01'
@@ -12,6 +13,7 @@ export default function Contracts() {
   const [year, setYear] = useState('all')
   const [mon, setMon] = useState('all')
   const [grp, setGrp] = useState('all')
+  const [drill, setDrill] = useState(null)
 
   const base = useMemo(() => rows.filter((c) => c.contract_date && c.contract_date >= FROM), [rows])
   const years = useMemo(() => [...new Set(base.map((c) => c.contract_date.slice(0, 4)))].sort().reverse(), [base])
@@ -76,7 +78,9 @@ export default function Contracts() {
           <Card key={m.month} className="overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-canvas">
               <span className="text-base font-bold text-ink-900">{monthLabel(m.month)}</span>
-              <span className="text-sm text-ink-500">{m.list.length}건 · <b className="text-brand tnum">{won(m.sum)}</b></span>
+              <span className="text-sm text-ink-500 cursor-pointer hover:underline"
+                onClick={() => setDrill({ title: `${monthLabel(m.month)} 계약`, subtitle: '합산 전 원본', kind: 'con', rows: valid.filter((c) => (c.contract_date || '').slice(0, 7) === m.month) })}>
+                {m.list.length}건 · <b className="text-brand tnum">{won(m.sum)}</b></span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm table-fixed min-w-[600px]">
@@ -92,7 +96,15 @@ export default function Contracts() {
                 </thead>
                 <tbody className="divide-y divide-line">
                   {m.list.map((c) => (
-                    <tr key={c.id} className="hover:bg-canvas">
+                    <tr key={c.id} className="hover:bg-canvas cursor-pointer"
+                      onClick={() => setDrill({
+                        title: c.title || '계약',
+                        subtitle: c._merged > 1 ? `${c._merged}건 합산 · 원본 계약` : '원본 계약',
+                        kind: 'con',
+                        rows: c.opportunity_external_id
+                          ? valid.filter((x) => x.opportunity_external_id === c.opportunity_external_id)
+                          : valid.filter((x) => x.id === c.id),
+                      })}>
                       <td className="px-5 py-2.5 font-medium text-ink-800 truncate" title={c.account_name}>{c.account_name || '-'}</td>
                       <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}{c._merged > 1 ? <span className="ml-1 rounded bg-canvas px-1 text-[10px] text-ink-400">{c._merged}건 합산</span> : ''}</td>
                       <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}{c.group_name ? <span className="text-ink-400 text-xs"> · {c.group_name}</span> : ''}</td>
@@ -106,6 +118,8 @@ export default function Contracts() {
           </Card>
         ))
       )}
+
+      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} kind={drill?.kind} rows={drill?.rows || []} />
     </div>
   )
 }

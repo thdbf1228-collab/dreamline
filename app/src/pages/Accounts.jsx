@@ -3,6 +3,7 @@ import { useOpportunities } from '../data/useOpportunities'
 import { STAGES, STATUSES, filterDeals } from '../data/aggregate'
 import { DealCard, Select } from '../components/ui'
 import { num } from '../lib/format'
+import DrillModal from '../components/DrillModal'
 import { isHiddenGroup } from '../data/useReps'
 import { Loading, ErrorBox } from './Overview'
 
@@ -11,6 +12,7 @@ const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status:
 
 export default function Accounts() {
   const { rows, error, loading } = useOpportunities()
+  const [drill, setDrill] = useState(false)
   const [f, setF] = useState(INIT)
 
   const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].filter((g) => !isHiddenGroup(g)).sort(), [rows])
@@ -31,7 +33,10 @@ export default function Accounts() {
     <div className="space-y-5">
       <header>
         <h1 className="text-xl font-bold text-ink-900">파이프라인 현황</h1>
-        <p className="text-sm text-ink-500">{num(filtered.length)}건 / 전체 {num((rows || []).length)}건</p>
+        <p className="text-sm text-ink-500">
+          <button type="button" onClick={() => setDrill(true)} className="underline-offset-4 hover:underline hover:text-ink-800">{num(filtered.length)}건</button>
+          {' / 전체 '}{num((rows || []).length)}건
+        </p>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -62,6 +67,8 @@ export default function Accounts() {
           {filtered.map((d) => <DealCard key={d.id} deal={d} />)}
         </div>
       )}
+
+      <DrillModal open={drill} onClose={() => setDrill(false)} title="파이프라인 백데이터" subtitle="현재 필터 기준" kind="opp" rows={filtered} />
     </div>
   )
 }

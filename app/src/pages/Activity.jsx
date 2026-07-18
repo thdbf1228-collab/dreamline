@@ -4,6 +4,7 @@ import { useActivities } from '../data/useActivities'
 import { useReps, isHiddenGroup } from '../data/useReps'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
+import DrillModal from '../components/DrillModal'
 
 const mLabel = (k) => `${k.slice(0, 4)}.${k.slice(5, 7)}`
 
@@ -24,7 +25,7 @@ function matrix(rows, dateField, year, rosterReps = []) {
   return { periods, reps, colTotals, grand: colTotals.reduce((s, n) => s + n, 0) }
 }
 
-function RepMatrix({ m }) {
+function RepMatrix({ m, onPick }) {
   if (!m.reps.length) return <p className="px-5 pb-5 text-sm text-ink-400">데이터 없음</p>
   const cell = (n) => (n ? <span className="text-ink-800 tnum">{n}</span> : <span className="text-ink-300">·</span>)
   return (
@@ -41,13 +42,20 @@ function RepMatrix({ m }) {
           {m.reps.map((r) => (
             <tr key={r.rep} className="hover:bg-canvas">
               <td className="px-4 py-2 font-medium text-ink-800 whitespace-nowrap">{r.rep}{r.group ? <span className="text-ink-400 font-normal text-xs"> · {r.group}</span> : ''}</td>
-              {m.periods.map((p) => <td key={p} className="px-2 py-2 text-right">{cell(r.by[p] || 0)}</td>)}
-              <td className="px-4 py-2 text-right font-bold text-brand tnum">{r.total}</td>
+              {m.periods.map((p) => (
+                <td key={p} className={`px-2 py-2 text-right ${r.by[p] ? 'cursor-pointer hover:underline' : ''}`}
+                  onClick={() => r.by[p] && onPick?.({ rep: r.rep, period: p })}>{cell(r.by[p] || 0)}</td>
+              ))}
+              <td className="px-4 py-2 text-right font-bold text-brand tnum cursor-pointer hover:underline"
+                onClick={() => r.total && onPick?.({ rep: r.rep })}>{r.total}</td>
             </tr>
           ))}
           <tr className="bg-canvas font-semibold">
             <td className="px-4 py-2 text-ink-900">합계</td>
-            {m.colTotals.map((t, i) => <td key={i} className="px-2 py-2 text-right text-ink-700 tnum">{t}</td>)}
+            {m.colTotals.map((t, i) => (
+              <td key={i} className="px-2 py-2 text-right text-ink-700 tnum cursor-pointer hover:underline"
+                onClick={() => t && onPick?.({ period: m.periods[i] })}>{t}</td>
+            ))}
             <td className="px-4 py-2 text-right text-brand tnum">{m.grand}</td>
           </tr>
         </tbody>
@@ -62,6 +70,7 @@ export default function Activity() {
   const { reps: repList } = useReps()
   const [year, setYear] = useState('all')
   const [grp, setGrp] = useState('all')
+  const [drill, setDrill] = useState(null)
 
   const years = useMemo(() => {
     const s = new Set()
@@ -105,13 +114,27 @@ export default function Activity() {
 
       <Card className="overflow-hidden">
         <div className="px-4 pt-4 pb-2 text-base font-bold text-ink-900">영업사원별 영업기회 <span className="text-xs font-normal text-ink-400">(시작일 기준)</span></div>
-        <RepMatrix m={oppM} />
+        <RepMatrix m={oppM} onPick={({ rep, period }) => {
+          let r = byGrp(opps || []).filter((x) => x.group_name && !isHiddenGroup(x.group_name) && x.rep_name)
+          if (year !== 'all') r = r.filter((x) => (x.start_date || '').slice(0, 4) === year)
+          if (rep) r = r.filter((x) => x.rep_name === rep)
+          if (period) r = r.filter((x) => (x.start_date || '').slice(0, 7) === period)
+          setDrill({ title: `${rep || '전체'} 영업기회`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), kind: 'opp', rows: r })
+        }} />
       </Card>
 
       <Card className="overflow-hidden">
         <div className="px-4 pt-4 pb-2 text-base font-bold text-ink-900">영업사원별 영업활동 <span className="text-xs font-normal text-ink-400">(활동일시 기준)</span></div>
-        <RepMatrix m={actM} />
+        <RepMatrix m={actM} onPick={({ rep, period }) => {
+          let r = byGrp(acts).filter((x) => x.group_name && !isHiddenGroup(x.group_name) && x.rep_name)
+          if (year !== 'all') r = r.filter((x) => (x.activity_date || '').slice(0, 4) === year)
+          if (rep) r = r.filter((x) => x.rep_name === rep)
+          if (period) r = r.filter((x) => (x.activity_date || '').slice(0, 7) === period)
+          setDrill({ title: `${rep || '전체'} 영업활동`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), kind: 'act', rows: r })
+        }} />
       </Card>
+
+      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} kind={drill?.kind} rows={drill?.rows || []} />
     </div>
   )
 }
