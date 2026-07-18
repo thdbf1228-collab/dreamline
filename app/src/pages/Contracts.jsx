@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useContracts } from '../data/useContracts'
+import { useOpportunities } from '../data/useOpportunities'
+import { useActivities } from '../data/useActivities'
 import { Card, Select } from '../components/ui'
 import { won, num } from '../lib/format'
 import DrillModal from '../components/DrillModal'
@@ -13,7 +15,24 @@ export default function Contracts() {
   const [year, setYear] = useState('all')
   const [mon, setMon] = useState('all')
   const [grp, setGrp] = useState('all')
+  const { rows: opps } = useOpportunities()
+  const { rows: acts } = useActivities()
   const [drill, setDrill] = useState(null)
+  const oppTitle = (oid) => (opps || []).find((o) => String(o.external_id) === String(oid))?.title || null
+  const openContract = (c) => {
+    const oid = c.opportunity_external_id
+    const rawCons = oid ? valid.filter((x) => String(x.opportunity_external_id) === String(oid)) : valid.filter((x) => x.id === c.id)
+    const t = oppTitle(oid)
+    setDrill({
+      title: `${c.account_name || ''} · ${c.title || '계약'}`.trim(),
+      subtitle: oid ? `영업기회ID ${oid}${c._merged > 1 ? ` · ${c._merged}건 합산` : ''}` : '영업기회 미연결',
+      sections: [
+        { kind: 'con', rows: rawCons.map((x) => ({ ...x, _opp_title: t })) },
+        { kind: 'opp', rows: oid ? (opps || []).filter((o) => String(o.external_id) === String(oid)) : [] },
+        { kind: 'act', rows: oid ? (acts || []).filter((a) => String(a.opportunity_external_id) === String(oid)).map((a) => ({ ...a, _opp_title: t })) : [] },
+      ],
+    })
+  }
 
   const base = useMemo(() => rows.filter((c) => c.contract_date && c.contract_date >= FROM), [rows])
   const years = useMemo(() => [...new Set(base.map((c) => c.contract_date.slice(0, 4)))].sort().reverse(), [base])
@@ -79,7 +98,7 @@ export default function Contracts() {
             <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-canvas">
               <span className="text-base font-bold text-ink-900">{monthLabel(m.month)}</span>
               <span className="text-sm text-ink-500 cursor-pointer hover:underline"
-                onClick={() => setDrill({ title: `${monthLabel(m.month)} 계약`, subtitle: '합산 전 원본', kind: 'con', rows: valid.filter((c) => (c.contract_date || '').slice(0, 7) === m.month) })}>
+                onClick={() => { const rs = valid.filter((c) => (c.contract_date || '').slice(0, 7) === m.month); const ids = new Set(rs.map((c) => c.opportunity_external_id).filter(Boolean)); setDrill({ title: `${monthLabel(m.month)} 계약`, subtitle: '합산 전 원본', sections: [{ kind: 'con', rows: rs.map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })) }, { kind: 'opp', rows: (opps || []).filter((o) => ids.has(o.external_id)) }] }) }}>
                 {m.list.length}건 · <b className="text-brand tnum">{won(m.sum)}</b></span>
             </div>
             <div className="overflow-x-auto">
@@ -97,14 +116,7 @@ export default function Contracts() {
                 <tbody className="divide-y divide-line">
                   {m.list.map((c) => (
                     <tr key={c.id} className="hover:bg-canvas cursor-pointer"
-                      onClick={() => setDrill({
-                        title: c.title || '계약',
-                        subtitle: c._merged > 1 ? `${c._merged}건 합산 · 원본 계약` : '원본 계약',
-                        kind: 'con',
-                        rows: c.opportunity_external_id
-                          ? valid.filter((x) => x.opportunity_external_id === c.opportunity_external_id)
-                          : valid.filter((x) => x.id === c.id),
-                      })}>
+                      onClick={() => openContract(c)}>
                       <td className="px-5 py-2.5 font-medium text-ink-800 truncate" title={c.account_name}>{c.account_name || '-'}</td>
                       <td className="px-3 py-2.5 text-ink-600 truncate" title={c.title}>{c.title}{c._merged > 1 ? <span className="ml-1 rounded bg-canvas px-1 text-[10px] text-ink-400">{c._merged}건 합산</span> : ''}</td>
                       <td className="px-3 py-2.5 text-ink-500 truncate">{c.rep_name || '-'}{c.group_name ? <span className="text-ink-400 text-xs"> · {c.group_name}</span> : ''}</td>
@@ -119,7 +131,7 @@ export default function Contracts() {
         ))
       )}
 
-      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} kind={drill?.kind} rows={drill?.rows || []} />
+      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} sections={drill?.sections || []} />
     </div>
   )
 }

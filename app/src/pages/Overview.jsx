@@ -23,7 +23,8 @@ export default function Overview() {
   const { rows: acts } = useActivities()
   const { reps: repList } = useReps()
   const [month, setMonth] = useState('all')
-  const [drill, setDrill] = useState(null) // {title, subtitle, kind, rows}
+  const [drill, setDrill] = useState(null)
+  const oppTitle = (oid) => (rows || []).find((o) => String(o.external_id) === String(oid))?.title || null
 
   // 고정 그룹 목록(미배정 제외) — 데이터 없는 달에도 항상 표시 (6월 오류 방지)
   const allGroups = useMemo(() => {
@@ -87,11 +88,11 @@ export default function Overview() {
         {groups.map((g) => (
           <Card key={g.name} className="p-4">
             <div className="text-base font-bold text-ink-900">{g.name} <span className="text-xs font-normal text-ink-400">({rosterByGroup[g.name]?.size || 0}명)</span></div>
-            <button type="button" onClick={() => setDrill({ title: `${g.name} 영업기회`, subtitle: periodLabel, kind: 'opp', rows: g.rows })}
+            <button type="button" onClick={() => setDrill({ title: `${g.name} 영업기회`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows }] })}
               className="mt-2 flex w-full items-baseline justify-between text-sm text-ink-500 hover:text-ink-800">
               <span>영업기회</span><span className="text-lg font-bold tnum underline-offset-4 hover:underline" style={{ color: C_OPP }}>{g.count}건</span>
             </button>
-            <button type="button" onClick={() => setDrill({ title: `${g.name} 영업활동`, subtitle: periodLabel, kind: 'act', rows: fActs.filter((a) => a.group_name === g.name) })}
+            <button type="button" onClick={() => setDrill({ title: `${g.name} 영업활동`, subtitle: periodLabel, sections: [{ kind: 'act', rows: (fActs.filter((a) => a.group_name === g.name)).map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })) }] })}
               className="flex w-full items-baseline justify-between text-sm text-ink-500 hover:text-ink-800">
               <span>영업활동</span><span className="text-lg font-bold tnum underline-offset-4 hover:underline" style={{ color: C_ACT }}>{g.act}건</span>
             </button>
@@ -120,13 +121,13 @@ export default function Overview() {
                   <tr key={g.name}>
                     <td className="px-5 py-2.5 font-semibold text-ink-900">{g.name}</td>
                     <td className="px-3 py-2.5 text-right tnum text-ink-600 cursor-pointer hover:underline"
-                      onClick={() => setDrill({ title: `${g.name} 영업기회 전체`, subtitle: periodLabel, kind: 'opp', rows: g.rows })}>{rt.total}건</td>
+                      onClick={() => setDrill({ title: `${g.name} 영업기회 전체`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows }] })}>{rt.total}건</td>
                     <td className="px-3 py-2.5 text-right tnum text-brand font-semibold cursor-pointer hover:underline"
-                      onClick={() => setDrill({ title: `${g.name} 진행중`, subtitle: periodLabel, kind: 'opp', rows: g.rows.filter((r) => r.status === '진행중') })}>{rt.progRate.toFixed(0)}%</td>
+                      onClick={() => setDrill({ title: `${g.name} 진행중`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows.filter((r) => r.status === '진행중') }] })}>{rt.progRate.toFixed(0)}%</td>
                     <td className="px-3 py-2.5 text-right tnum font-semibold cursor-pointer hover:underline" style={{ color: C_OPP }}
-                      onClick={() => setDrill({ title: `${g.name} 종료(성공)`, subtitle: periodLabel, kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(성공)') })}>{rt.winRate.toFixed(0)}%</td>
+                      onClick={() => setDrill({ title: `${g.name} 종료(성공)`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(성공)') }] })}>{rt.winRate.toFixed(0)}%</td>
                     <td className="px-5 py-2.5 text-right tnum text-lost font-semibold cursor-pointer hover:underline"
-                      onClick={() => setDrill({ title: `${g.name} 실패·보류`, subtitle: periodLabel, kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(실패)' || r.status === '보류·연기') })}>{rt.lostRate.toFixed(0)}%</td>
+                      onClick={() => setDrill({ title: `${g.name} 실패·보류`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(실패)' || r.status === '보류·연기') }] })}>{rt.lostRate.toFixed(0)}%</td>
                   </tr>
                 )
               })}
@@ -137,17 +138,17 @@ export default function Overview() {
 
       {/* 3. 그룹별 막대 */}
       <div className="grid md:grid-cols-2 gap-4">
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 그룹별</h2><VBars data={oppGroupBars} color={C_OPP} onPick={(n) => setDrill({ title: `${n} 영업기회`, subtitle: periodLabel, kind: 'opp', rows: fOpp.filter((r) => r.group_name === n) })} /></Card>
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 그룹별</h2><VBars data={actGroupBars} color={C_ACT} onPick={(n) => setDrill({ title: `${n} 영업활동`, subtitle: periodLabel, kind: 'act', rows: fActs.filter((a) => a.group_name === n) })} /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 그룹별</h2><VBars data={oppGroupBars} color={C_OPP} onPick={(n) => setDrill({ title: `${n} 영업기회`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: fOpp.filter((r) => r.group_name === n) }] })} /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 그룹별</h2><VBars data={actGroupBars} color={C_ACT} onPick={(n) => setDrill({ title: `${n} 영업활동`, subtitle: periodLabel, sections: [{ kind: 'act', rows: (fActs.filter((a) => a.group_name === n)).map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })) }] })} /></Card>
       </div>
 
       {/* 4. 담당자별 막대 (맨 아래, 미배정 제외) */}
       <div className="grid md:grid-cols-2 gap-4">
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 담당자별</h2><HBars data={reps} color={C_OPP} onPick={(n) => setDrill({ title: `${n} 영업기회`, subtitle: periodLabel, kind: 'opp', rows: fOpp.filter((r) => r.rep_name === n) })} /></Card>
-        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 담당자별</h2><HBars data={actReps} color={C_ACT} onPick={(n) => setDrill({ title: `${n} 영업활동`, subtitle: periodLabel, kind: 'act', rows: fActs.filter((a) => a.rep_name === n) })} /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업기회 담당자별</h2><HBars data={reps} color={C_OPP} onPick={(n) => setDrill({ title: `${n} 영업기회`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: fOpp.filter((r) => r.rep_name === n) }] })} /></Card>
+        <Card className="p-5"><h2 className="text-base font-bold text-ink-900 mb-4">영업활동 담당자별</h2><HBars data={actReps} color={C_ACT} onPick={(n) => setDrill({ title: `${n} 영업활동`, subtitle: periodLabel, sections: [{ kind: 'act', rows: (fActs.filter((a) => a.rep_name === n)).map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })) }] })} /></Card>
       </div>
 
-      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} kind={drill?.kind} rows={drill?.rows || []} />
+      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} sections={drill?.sections || []} />
     </div>
   )
 }

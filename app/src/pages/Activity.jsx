@@ -71,6 +71,7 @@ export default function Activity() {
   const [year, setYear] = useState('all')
   const [grp, setGrp] = useState('all')
   const [drill, setDrill] = useState(null)
+  const oppTitle = (oid) => (opps || []).find((o) => String(o.external_id) === String(oid))?.title || null
 
   const years = useMemo(() => {
     const s = new Set()
@@ -119,7 +120,7 @@ export default function Activity() {
           if (year !== 'all') r = r.filter((x) => (x.start_date || '').slice(0, 4) === year)
           if (rep) r = r.filter((x) => x.rep_name === rep)
           if (period) r = r.filter((x) => (x.start_date || '').slice(0, 7) === period)
-          setDrill({ title: `${rep || '전체'} 영업기회`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), kind: 'opp', rows: r })
+          setDrill({ title: `${rep || '전체'} 영업기회`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), sections: [{ kind: 'opp', rows: r }] })
         }} />
       </Card>
 
@@ -130,11 +131,11 @@ export default function Activity() {
           if (year !== 'all') r = r.filter((x) => (x.activity_date || '').slice(0, 4) === year)
           if (rep) r = r.filter((x) => x.rep_name === rep)
           if (period) r = r.filter((x) => (x.activity_date || '').slice(0, 7) === period)
-          setDrill({ title: `${rep || '전체'} 영업활동`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), kind: 'act', rows: r })
+          setDrill({ title: `${rep || '전체'} 영업활동`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), sections: [{ kind: 'act', rows: r.map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })) }] })
         }} />
       </Card>
 
-      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} kind={drill?.kind} rows={drill?.rows || []} />
+      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} sections={drill?.sections || []} />
     </div>
   )
 }

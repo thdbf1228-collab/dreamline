@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOpportunities } from '../data/useOpportunities'
+import { useActivities } from '../data/useActivities'
+import { useContracts } from '../data/useContracts'
 import { STAGES, STATUSES, filterDeals } from '../data/aggregate'
 import { DealCard, Select } from '../components/ui'
 import { num } from '../lib/format'
@@ -12,7 +14,9 @@ const INIT = { salesType: 'all', group: 'all', rep: 'all', stage: 'all', status:
 
 export default function Accounts() {
   const { rows, error, loading } = useOpportunities()
-  const [drill, setDrill] = useState(false)
+  const { rows: acts } = useActivities()
+  const { rows: cons } = useContracts()
+  const [drill, setDrill] = useState(null)
   const [f, setF] = useState(INIT)
 
   const groups = useMemo(() => [...new Set((rows || []).map((r) => r.group_name || '미배정'))].filter((g) => !isHiddenGroup(g)).sort(), [rows])
@@ -29,12 +33,27 @@ export default function Accounts() {
   if (error) return <ErrorBox msg={error} />
   const set = (k) => (v) => setF((p) => ({ ...p, [k]: v }))
 
+  // 같은 영업기회ID의 영업활동·계약을 함께 조회
+  const openDeal = (d) => {
+    const oid = d.external_id
+    const oppTitle = d.title
+    setDrill({
+      title: `${d.account_name || ''} · ${d.title || ''}`.trim(),
+      subtitle: `영업기회ID ${oid}`,
+      sections: [
+        { kind: 'opp', rows: [d] },
+        { kind: 'act', rows: (acts || []).filter((a) => String(a.opportunity_external_id) === String(oid)).map((a) => ({ ...a, _opp_title: oppTitle })) },
+        { kind: 'con', rows: (cons || []).filter((c) => String(c.opportunity_external_id) === String(oid)).map((c) => ({ ...c, _opp_title: oppTitle })) },
+      ],
+    })
+  }
+
   return (
     <div className="space-y-5">
       <header>
         <h1 className="text-xl font-bold text-ink-900">파이프라인 현황</h1>
         <p className="text-sm text-ink-500">
-          <button type="button" onClick={() => setDrill(true)} className="underline-offset-4 hover:underline hover:text-ink-800">{num(filtered.length)}건</button>
+          <button type="button" onClick={() => setDrill({ title: '파이프라인 백데이터', subtitle: '현재 필터 기준', sections: [{ kind: 'opp', rows: filtered }] })} className="underline-offset-4 hover:underline hover:text-ink-800">{num(filtered.length)}건</button>
           {' / 전체 '}{num((rows || []).length)}건
         </p>
       </header>
@@ -64,11 +83,11 @@ export default function Accounts() {
         <p className="py-16 text-center text-sm text-ink-400">조건에 맞는 거래가 없습니다.</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {filtered.map((d) => <DealCard key={d.id} deal={d} />)}
+          {filtered.map((d) => <DealCard onOpen={() => openDeal(d)} key={d.id} deal={d} />)}
         </div>
       )}
 
-      <DrillModal open={drill} onClose={() => setDrill(false)} title="파이프라인 백데이터" subtitle="현재 필터 기준" kind="opp" rows={filtered} />
+      <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} sections={drill?.sections || []} />
     </div>
   )
 }

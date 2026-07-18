@@ -172,6 +172,17 @@ export async function ingestActivities(file, log = () => {}, replace = false) {
       opportunity_external_id: parseInt0(r['영업기회ID']) || null,
       activity_type: type,
       activity_purpose: String(r['활동목적'] || '').trim() || null,
+      activity_content: String(r['활동내용'] || '').trim() || null,
+      plan_content: String(r['계획내용'] || '').trim() || null,
+      start_time: String(r['활동시작시간'] || '').trim() || null,
+      end_time: String(r['활동종료시간'] || '').trim() || null,
+      opportunity_title: String(r['영업기회'] || '').trim() || null,
+      related_product: String(r['연관제품'] || '').trim() || null,
+      companion: String(r['동반'] || '').trim() || null,
+      participants: String(r['참가자'] || '').trim() || null,
+      customer_name: String(r['고객'] || '').trim() || null,
+      registered_by: String(r['등록자'] || '').trim() || null,
+      registered_at: parseDate(r['등록일']),
       activity_date: parseDate(r['활동일시']),
     }
   })

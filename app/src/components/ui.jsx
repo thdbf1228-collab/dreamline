@@ -4,8 +4,8 @@ import { STAGE_SHORT, STAGE_FILL, isOverdue } from '../data/aggregate'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 
-export function Card({ children, className = '' }) {
-  return <div className={`bg-paper rounded-xl border border-line shadow-card ${className}`}>{children}</div>
+export function Card({ children, className = '', ...rest }) {
+  return <div className={`bg-paper rounded-xl border border-line shadow-card ${className}`} {...rest}>{children}</div>
 }
 
 export function KpiCard({ label, value, sub }) {
@@ -90,7 +90,7 @@ function StageBar({ stageId }) {
 
 const GROUP_BADGE = 'text-ink-900 font-bold'
 // 파이프라인 카드 — 모든 카드 동일 높이(제목 2줄·사유 2줄 고정), 날짜·금액 맨 아래
-export function DealCard({ deal }) {
+export function DealCard({ deal , onOpen }) {
   const { isAdmin } = useAuth()
   const reason = deal.note || deal.lost_reason
   const showReason = (deal.status === '보류/연기' || deal.status === '종료(실패)') && reason
@@ -102,7 +102,7 @@ export function DealCard({ deal }) {
     deal.admin_memo = v
   }
   return (
-    <Card className="p-4 flex flex-col h-full">
+    <Card className="p-4 flex flex-col h-full cursor-pointer transition hover:ring-2 hover:ring-brand/30" onClick={onOpen}>
       <div className="flex items-center gap-1.5 mb-2">
         <StatusPill status={deal.status} />
         {deal.group_name && <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${GROUP_BADGE}`}>{deal.group_name}</span>}
@@ -111,7 +111,7 @@ export function DealCard({ deal }) {
           : <span className="rounded px-1.5 py-0.5 text-[11px] font-medium invisible" aria-hidden="true">정체</span>}
         {/* 정체 뒤부터 남은 폭 전부 — 관리자 메모 */}
         {isAdmin ? (
-          <input value={memo} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
+          <input value={memo} onClick={(e) => e.stopPropagation()} onChange={(e) => setMemo(e.target.value)} onBlur={saveMemo} placeholder="＋ 관리자 메모"
             className="ml-1 flex-1 min-w-0 rounded-md border border-dashed border-line bg-canvas px-2 py-0.5 text-xs text-ink-800 focus:border-brand focus:bg-paper" />
         ) : (deal.admin_memo ? (
           <div className="ml-1 flex-1 min-w-0 truncate rounded-md px-2 py-0.5 text-xs font-bold memo-flash" title={deal.admin_memo}>{deal.admin_memo}</div>
