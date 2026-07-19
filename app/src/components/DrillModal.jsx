@@ -6,9 +6,9 @@ const COLUMNS = {
   opp: [
     { key: 'external_id', label: '영업기회ID', w: '7em' },
     { key: 'title', label: '영업기회', w: '22em', long: true },
-    { key: 'account_name', label: '고객사', w: '12em' },
-    { key: 'rep_name', label: '담당자', w: '6em' },
-    { key: 'group_name', label: '그룹', w: '5em' },
+    { key: 'account_name', label: '고객사', w: '10em' },
+    { key: 'rep_name', label: '담당자', w: '5em' },
+    { key: 'group_name', label: '그룹', w: '4em' },
     { key: 'status', label: '진행상태', w: '7em' },
     { key: 'stage_label', label: '단계', w: '7em' },
     { key: 'product', label: '제품', w: '10em' },
@@ -28,9 +28,9 @@ const COLUMNS = {
     { key: 'activity_date', label: '활동일시', w: '7em' },
     { key: 'activity_type', label: '활동분류', w: '7em' },
     { key: 'activity_purpose', label: '활동목적', w: '9em' },
-    { key: 'rep_name', label: '담당자', w: '6em' },
-    { key: 'group_name', label: '그룹', w: '5em' },
-    { key: 'account_name', label: '고객사', w: '12em' },
+    { key: 'rep_name', label: '담당자', w: '5em' },
+    { key: 'group_name', label: '그룹', w: '4em' },
+    { key: 'account_name', label: '고객사', w: '10em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
     { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', long: true },
     { key: 'plan_content', label: '계획내용', w: '22em', long: true, multiline: true },
@@ -47,9 +47,9 @@ const COLUMNS = {
     { key: 'external_id', label: '계약ID', w: '6em' },
     { key: 'contract_date', label: '계약일', w: '7em' },
     { key: 'title', label: '계약명', w: '22em', long: true },
-    { key: 'account_name', label: '고객사', w: '12em' },
-    { key: 'rep_name', label: '담당자', w: '6em' },
-    { key: 'group_name', label: '그룹', w: '5em' },
+    { key: 'account_name', label: '고객사', w: '10em' },
+    { key: 'rep_name', label: '담당자', w: '5em' },
+    { key: 'group_name', label: '그룹', w: '4em' },
     { key: 'related_product', label: '연관제품', w: '11em' },
     { key: 'supply_amount', label: '공급가액', w: '8em', money: true, right: true },
     { key: 'tax_amount', label: '세액', w: '7em', money: true, right: true },
@@ -139,12 +139,12 @@ function Section({ kind, rows, hide, q, rep, single, expandAll }) {
         <p className="py-6 text-center text-sm text-ink-400">해당 데이터 없음</p>
       ) : (
         <div>
-          <table className="w-full table-fixed text-sm">
+          <table className="w-full text-sm">
             <thead className="sticky top-0 z-20 bg-canvas text-xs text-ink-500 shadow-[0_1px_0_0_rgba(0,0,0,0.08)]">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">#</th>
                 {cols.map((c) => (
-                  <th key={c.key} className={`whitespace-nowrap px-3 py-2 font-medium ${c.right ? 'text-right' : 'text-left'}`} style={{ width: c.w }}>{c.label}</th>
+                  <th key={c.key} className={`whitespace-nowrap px-3 py-2 font-medium ${c.right ? 'text-right' : 'text-left'}`} style={c.long ? { width: c.w, minWidth: c.w, maxWidth: c.w } : { minWidth: c.w }}>{c.label}</th>
                 ))}
               </tr>
             </thead>
@@ -157,7 +157,7 @@ function Section({ kind, rows, hide, q, rep, single, expandAll }) {
                     return (
                       <td key={c.key}
                         className={`px-3 py-2 text-xs leading-relaxed ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.long ? 'align-top' : 'whitespace-nowrap align-top'}`}
-                        style={c.long ? { maxWidth: c.w, width: c.w } : undefined}>
+                        style={c.long ? { width: c.w, minWidth: c.w, maxWidth: c.w } : undefined}>
                         <Cell v={v} c={c} expandAll={expandAll} />
                       </td>
                     )
