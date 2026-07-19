@@ -5,7 +5,7 @@ import { won, num } from '../lib/format'
 const COLUMNS = {
   opp: [
     { key: 'external_id', label: '영업기회ID', w: '7em' },
-    { key: 'title', label: '영업기회', w: '24em', clamp: 30 },
+    { key: 'title', label: '영업기회', w: '22em', long: true },
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'rep_name', label: '담당자', w: '6em' },
     { key: 'group_name', label: '그룹', w: '5em' },
@@ -16,12 +16,12 @@ const COLUMNS = {
     { key: 'est_amount', label: '예상매출', w: '8em', money: true, right: true },
     { key: 'confirmed_amount', label: '계약금액', w: '8em', money: true, right: true },
     { key: 'win_prob', label: '성공확률', w: '6em', right: true },
-    { key: 'lost_reason', label: '실패구분', w: '8em' },
+    { key: 'lost_reason', label: '실패구분', w: '14em', long: true },
     { key: 'channel', label: '인지경로', w: '8em' },
     { key: 'start_date', label: '시작일', w: '7em' },
     { key: 'end_date', label: '종료일', w: '7em' },
     { key: 'registered_at', label: '등록일', w: '7em' },
-    { key: 'note', label: '비고', w: '14em', clamp: 15 },
+    { key: 'note', label: '비고', w: '22em', long: true },
   ],
   act: [
     { key: 'external_id', label: '영업활동ID', w: '7em' },
@@ -32,9 +32,9 @@ const COLUMNS = {
     { key: 'group_name', label: '그룹', w: '5em' },
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
-    { key: 'opportunity_title', label: '영업기회명', w: '26em', alt: '_opp_title', wrap: true },
-    { key: 'plan_content', label: '계획내용', w: '26em', wrap: true },
-    { key: 'activity_content', label: '활동내용', w: '32em', wrap: true },
+    { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', long: true },
+    { key: 'plan_content', label: '계획내용', w: '22em', long: true, multiline: true },
+    { key: 'activity_content', label: '활동내용', w: '22em', long: true, multiline: true },
     { key: 'related_product', label: '연관제품', w: '10em' },
     { key: 'start_time', label: '시작시간', w: '6em' },
     { key: 'end_time', label: '종료시간', w: '6em' },
@@ -46,7 +46,7 @@ const COLUMNS = {
   con: [
     { key: 'external_id', label: '계약ID', w: '6em' },
     { key: 'contract_date', label: '계약일', w: '7em' },
-    { key: 'title', label: '계약명', w: '24em', clamp: 30 },
+    { key: 'title', label: '계약명', w: '22em', long: true },
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'rep_name', label: '담당자', w: '6em' },
     { key: 'group_name', label: '그룹', w: '5em' },
@@ -57,8 +57,8 @@ const COLUMNS = {
     { key: 'start_date', label: '시작일', w: '7em' },
     { key: 'end_date', label: '종료일', w: '7em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
-    { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', wrap: true },
-    { key: 'note', label: '비고', w: '14em', clamp: 15 },
+    { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', long: true },
+    { key: 'note', label: '비고', w: '22em', long: true },
   ],
 }
 const KIND_LABEL = { opp: '영업기회', act: '영업활동', con: '계약' }
@@ -71,17 +71,24 @@ function Cell({ v, c }) {
   if (v == null || v === '') return <span className="text-ink-300">-</span>
   if (c.money) return won(v)
   const text = String(v)
-  if (c.clamp && text.length > c.clamp) {
-    return (
-      <span className={open ? 'whitespace-pre-line' : ''}>
-        {open ? text : text.slice(0, c.clamp) + '…'}
-        <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
-          className="ml-1 shrink-0 text-[11px] text-brand hover:underline">{open ? '접기' : '펼치기'}</button>
-      </span>
-    )
-  }
-  return text
+  if (!c.long) return text
+
+  // 한글 1자 ≈ 1em, 영문/숫자 ≈ 0.5em 로 표시 폭 추정
+  let em = 0
+  for (const ch of text) em += ch.charCodeAt(0) > 127 ? 1 : 0.5
+  const limit = 21 // 컬럼 폭(22em)보다 살짝 작게
+  const overflow = em > limit || text.includes('\n')
+  if (!overflow) return <span className="whitespace-pre-line">{text}</span>
+
+  return (
+    <span className="inline-block w-full">
+      <span className={open ? 'block whitespace-pre-line' : 'block truncate'}>{text}</span>
+      <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+        className="mt-0.5 text-[11px] text-brand hover:underline">{open ? '접기' : '펼치기'}</button>
+    </span>
+  )
 }
+
 const colsFor = (kind, hide = []) => (COLUMNS[kind] || COLUMNS.opp).filter((c) => !hide.includes(c.key))
 
 function Section({ kind, rows, hide, q, rep, single }) {
@@ -127,8 +134,8 @@ function Section({ kind, rows, hide, q, rep, single }) {
                     const v = valOf(r, c)
                     return (
                       <td key={c.key}
-                        className={`px-3 py-2 ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.wrap ? 'whitespace-pre-line text-xs leading-relaxed align-top' : c.clamp ? 'align-top' : 'whitespace-nowrap'}`}
-                        style={c.wrap ? { maxWidth: '32em' } : undefined}>
+                        className={`px-3 py-2 text-xs leading-relaxed ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.long ? 'align-top' : 'whitespace-nowrap align-top'}`}
+                        style={c.long ? { maxWidth: c.w, width: c.w } : undefined}>
                         <Cell v={v} c={c} />
                       </td>
                     )
