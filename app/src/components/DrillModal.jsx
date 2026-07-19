@@ -74,23 +74,35 @@ function Cell({ v, c, expandAll }) {
   const text = String(v)
   if (!c.long) return text
 
-  // 한글 1자 ≈ 1em, 영문/숫자 ≈ 0.5em → 2줄(약 42em)을 넘을 때만 펼치기
+  // 한글 1자 ≈ 1em, 영문/숫자 ≈ 0.5em → 2줄(약 42em) 초과 또는 3줄 이상일 때만 펼치기
   let em = 0
   for (const ch of text) em += ch.charCodeAt(0) > 127 ? 1 : 0.5
-  const lines = text.split('\n').length
-  const overflow = em > 41 || lines > 2
+  const overflow = em > 41 || text.split('\n').length > 2
   if (!overflow) return <span className="whitespace-pre-line">{text}</span>
+
+  // display 충돌 방지를 위해 인라인 스타일로 2줄 고정
+  const clampStyle = {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: 2,
+    overflow: 'hidden',
+    whiteSpace: 'pre-line',
+  }
+  const openStyle = { display: 'block', whiteSpace: 'pre-line' }
 
   return (
     <span className="relative block">
-      <span className={open ? 'block whitespace-pre-line' : 'block whitespace-pre-line line-clamp-2'}>{text}</span>
+      <span style={open ? openStyle : clampStyle}>{text}</span>
       <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
-        className={`text-[11px] text-brand hover:underline ${open ? 'mt-0.5' : 'absolute bottom-0 right-0 bg-paper pl-1 shadow-[-6px_0_6px_-4px_rgba(255,255,255,1)]'}`}>
+        className={open
+          ? 'mt-0.5 text-[11px] text-brand hover:underline'
+          : 'absolute bottom-0 right-0 bg-paper pl-1 text-[11px] text-brand hover:underline'}>
         {open ? '접기' : '펼치기'}
       </button>
     </span>
   )
 }
+
 
 
 const colsFor = (kind, hide = []) => (COLUMNS[kind] || COLUMNS.opp).filter((c) => !hide.includes(c.key))
@@ -217,8 +229,10 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
               </select>
             )}
             <div className="flex overflow-hidden rounded-lg border border-line">
-              <button onClick={() => setExpandAll({ val: true, ...seq() })} className="px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">모두 펼치기</button>
-              <button onClick={() => setExpandAll({ val: false, ...seq() })} className="border-l border-line px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">모두 접기</button>
+              <button onClick={() => setExpandAll({ val: true, ...seq() })}
+                className={`px-2.5 py-1.5 text-sm ${expandAll?.val === true ? 'bg-ink-900 font-semibold text-white' : 'text-ink-600 hover:bg-canvas'}`}>모두 펼치기</button>
+              <button onClick={() => setExpandAll({ val: false, ...seq() })}
+                className={`border-l border-line px-2.5 py-1.5 text-sm ${expandAll?.val === false ? 'bg-ink-900 font-semibold text-white' : 'text-ink-600 hover:bg-canvas'}`}>모두 접기</button>
             </div>
             <button onClick={download} className="rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">엑셀 다운로드</button>
             <button onClick={onClose} className="rounded-lg bg-canvas px-2.5 py-1.5 text-sm text-ink-600 hover:bg-line">닫기</button>
