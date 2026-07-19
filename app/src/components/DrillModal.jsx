@@ -5,36 +5,36 @@ import { won, num } from '../lib/format'
 const COLUMNS = {
   opp: [
     { key: 'external_id', label: '영업기회ID', w: '7em' },
-    { key: 'title', label: '영업기회', w: '22em', long: true },
-    { key: 'account_name', label: '고객사', w: '10em' },
-    { key: 'rep_name', label: '담당자', w: '5em' },
-    { key: 'group_name', label: '그룹', w: '4em' },
-    { key: 'status', label: '진행상태', w: '7em' },
-    { key: 'stage_label', label: '단계', w: '7em' },
+    { key: 'title', label: '영업기회', w: '26em', long: true },
+    { key: 'account_name', label: '고객사', w: '8em' },
+    { key: 'rep_name', label: '담당자', w: '4em' },
+    { key: 'group_name', label: '그룹', w: '3.5em' },
+    { key: 'status', label: '진행상태', w: '5.5em' },
+    { key: 'stage_label', label: '단계', w: '5em' },
     { key: 'product', label: '제품', w: '10em' },
-    { key: 'sales_type', label: '매출구분', w: '6em' },
+    { key: 'sales_type', label: '매출구분', w: '5em' },
     { key: 'est_amount', label: '예상매출', w: '8em', money: true, right: true },
     { key: 'confirmed_amount', label: '계약금액', w: '8em', money: true, right: true },
     { key: 'win_prob', label: '성공확률', w: '6em', right: true },
     { key: 'lost_reason', label: '실패구분', w: '8em' },
     { key: 'channel', label: '인지경로', w: '8em' },
-    { key: 'start_date', label: '시작일', w: '7em' },
-    { key: 'end_date', label: '종료일', w: '7em' },
-    { key: 'registered_at', label: '등록일', w: '7em' },
-    { key: 'note', label: '비고', w: '22em', long: true },
+    { key: 'start_date', label: '시작일', w: '6em' },
+    { key: 'end_date', label: '종료일', w: '6em' },
+    { key: 'registered_at', label: '등록일', w: '6em' },
+    { key: 'note', label: '비고', w: '26em', long: true },
   ],
   act: [
     { key: 'external_id', label: '영업활동ID', w: '7em' },
-    { key: 'activity_date', label: '활동일시', w: '7em' },
-    { key: 'activity_type', label: '활동분류', w: '7em' },
-    { key: 'activity_purpose', label: '활동목적', w: '9em' },
-    { key: 'rep_name', label: '담당자', w: '5em' },
-    { key: 'group_name', label: '그룹', w: '4em' },
-    { key: 'account_name', label: '고객사', w: '10em' },
+    { key: 'activity_date', label: '활동일시', w: '5.5em' },
+    { key: 'activity_type', label: '활동분류', w: '4.5em' },
+    { key: 'activity_purpose', label: '활동목적', w: '5.5em' },
+    { key: 'rep_name', label: '담당자', w: '4em' },
+    { key: 'group_name', label: '그룹', w: '3.5em' },
+    { key: 'account_name', label: '고객사', w: '8em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
-    { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', long: true },
-    { key: 'plan_content', label: '계획내용', w: '22em', long: true, multiline: true },
-    { key: 'activity_content', label: '활동내용', w: '22em', long: true, multiline: true },
+    { key: 'opportunity_title', label: '영업기회명', w: '28em', alt: '_opp_title', long: true },
+    { key: 'plan_content', label: '계획내용', w: '28em', long: true, multiline: true },
+    { key: 'activity_content', label: '활동내용', w: '32em', long: true, multiline: true },
     { key: 'related_product', label: '연관제품', w: '10em' },
     { key: 'start_time', label: '시작시간', w: '6em' },
     { key: 'end_time', label: '종료시간', w: '6em' },
@@ -45,20 +45,20 @@ const COLUMNS = {
   ],
   con: [
     { key: 'external_id', label: '계약ID', w: '6em' },
-    { key: 'contract_date', label: '계약일', w: '7em' },
-    { key: 'title', label: '계약명', w: '22em', long: true },
-    { key: 'account_name', label: '고객사', w: '10em' },
-    { key: 'rep_name', label: '담당자', w: '5em' },
-    { key: 'group_name', label: '그룹', w: '4em' },
+    { key: 'contract_date', label: '계약일', w: '6em' },
+    { key: 'title', label: '계약명', w: '26em', long: true },
+    { key: 'account_name', label: '고객사', w: '8em' },
+    { key: 'rep_name', label: '담당자', w: '4em' },
+    { key: 'group_name', label: '그룹', w: '3.5em' },
     { key: 'related_product', label: '연관제품', w: '11em' },
     { key: 'supply_amount', label: '공급가액', w: '8em', money: true, right: true },
     { key: 'tax_amount', label: '세액', w: '7em', money: true, right: true },
     { key: 'total_amount', label: '합계금액', w: '8em', money: true, right: true },
-    { key: 'start_date', label: '시작일', w: '7em' },
-    { key: 'end_date', label: '종료일', w: '7em' },
+    { key: 'start_date', label: '시작일', w: '6em' },
+    { key: 'end_date', label: '종료일', w: '6em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
-    { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', long: true },
-    { key: 'note', label: '비고', w: '22em', long: true },
+    { key: 'opportunity_title', label: '영업기회명', w: '28em', alt: '_opp_title', long: true },
+    { key: 'note', label: '비고', w: '26em', long: true },
   ],
 }
 const KIND_LABEL = { opp: '영업기회', act: '영업활동', con: '계약' }
@@ -66,10 +66,12 @@ const SUM_KEY = { opp: 'est_amount', con: 'supply_amount' }
 
 const valOf = (r, c) => r[c.key] ?? (c.alt ? r[c.alt] : null)
 
-function Cell({ v, c, expandAll }) {
+function Cell({ v, c, expandAll, session }) {
   const [open, setOpen] = useState(false)
   const [canExpand, setCanExpand] = useState(false)
   const ref = useRef(null)
+  // 상세화면이 바뀌면 무조건 접힘 상태로 초기화
+  useEffect(() => { setOpen(false) }, [session])
   useEffect(() => { if (expandAll) setOpen(expandAll.val) }, [expandAll])
   // 실제로 2줄을 넘겨 잘렸을 때만 펼치기 노출 (글자수 추정 X)
   useLayoutEffect(() => {
@@ -113,7 +115,7 @@ function Cell({ v, c, expandAll }) {
 
 const colsFor = (kind, hide = []) => (COLUMNS[kind] || COLUMNS.opp).filter((c) => !hide.includes(c.key))
 
-function Section({ kind, rows, hide, rep, single, expandAll }) {
+function Section({ kind, rows, hide, rep, single, expandAll, session }) {
   const cols = useMemo(() => colsFor(kind, hide), [kind, hide])
   const list = useMemo(() => {
     let out = rows
@@ -154,7 +156,7 @@ function Section({ kind, rows, hide, rep, single, expandAll }) {
                       <td key={c.key}
                         className={`px-3 py-2 text-xs leading-relaxed ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.long ? 'align-top' : 'whitespace-nowrap align-top'}`}
                         style={c.long ? { width: c.w, minWidth: c.w, maxWidth: c.w } : undefined}>
-                        <Cell v={v} c={c} expandAll={expandAll} />
+                        <Cell v={v} c={c} expandAll={expandAll} session={session} />
                       </td>
                     )
                   })}
@@ -171,8 +173,10 @@ function Section({ kind, rows, hide, rep, single, expandAll }) {
 // sections: [{ kind:'opp'|'act'|'con', rows:[], hide:['키'] }]
 // 열릴 때마다 새로 마운트되는 본문 — 펼침/필터 상태가 자동 초기화됨
 function DrillBody({ onClose, title, subtitle, sections }) {
+  const session = `${title}|${subtitle}`
   const [rep, setRep] = useState('all')
   const [expandAll, setExpandAll] = useState(null)
+  useEffect(() => { setExpandAll(null); setRep('all') }, [session])
   const seq = () => ({ seq: Date.now() })
 
   const repOptions = useMemo(() => {
@@ -230,7 +234,7 @@ function DrillBody({ onClose, title, subtitle, sections }) {
       </div>
       <div className="drill-scroll min-h-0 flex-1 overflow-auto">
         {shown.map((sec, i) => (
-          <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} rep={rep} single={shown.length === 1} expandAll={expandAll} />
+          <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} rep={rep} single={shown.length === 1} expandAll={expandAll} session={session} />
         ))}
       </div>
     </div>
