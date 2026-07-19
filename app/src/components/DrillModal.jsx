@@ -113,17 +113,13 @@ function Cell({ v, c, expandAll }) {
 
 const colsFor = (kind, hide = []) => (COLUMNS[kind] || COLUMNS.opp).filter((c) => !hide.includes(c.key))
 
-function Section({ kind, rows, hide, q, rep, single, expandAll }) {
+function Section({ kind, rows, hide, rep, single, expandAll }) {
   const cols = useMemo(() => colsFor(kind, hide), [kind, hide])
   const list = useMemo(() => {
     let out = rows
     if (rep !== 'all') out = out.filter((r) => r.rep_name === rep)
-    if (q.trim()) {
-      const s = q.trim().toLowerCase()
-      out = out.filter((r) => cols.some((c) => String(valOf(r, c) ?? '').toLowerCase().includes(s)))
-    }
     return out
-  }, [rows, q, rep, cols])
+  }, [rows, rep])
   const sumKey = SUM_KEY[kind]
   const total = sumKey && cols.some((c) => c.key === sumKey) ? list.reduce((s, r) => s + (Number(r[sumKey]) || 0), 0) : null
 
@@ -174,11 +170,10 @@ function Section({ kind, rows, hide, q, rep, single, expandAll }) {
 
 // sections: [{ kind:'opp'|'act'|'con', rows:[], hide:['키'] }]
 export default function DrillModal({ open, onClose, title, subtitle, sections = [] }) {
-  const [q, setQ] = useState('')
   const [rep, setRep] = useState('all')
   const [expandAll, setExpandAll] = useState(null)
   const seq = () => ({ seq: Date.now() })
-  useEffect(() => { if (open) { setQ(''); setRep('all'); setExpandAll(null) } }, [open])
+  useEffect(() => { if (open) { setRep('all'); setExpandAll(null) } }, [open, title, subtitle])
   useEffect(() => {
     if (!open) return
     const h = (e) => { if (e.key === 'Escape') onClose() }
@@ -225,8 +220,6 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
             <p className="mt-0.5 text-xs text-ink-500">{subtitle ? subtitle + ' · ' : ''}총 {num(totalRows)}건</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="검색"
-              className="w-40 rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-brand" />
             {repOptions.length > 1 && (
               <select value={rep} onChange={(e) => setRep(e.target.value)}
                 className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
@@ -244,9 +237,9 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
             <button onClick={onClose} className="rounded-lg bg-canvas px-2.5 py-1.5 text-sm text-ink-600 hover:bg-line">닫기</button>
           </div>
         </div>
-        <div className="drill-scroll min-h-0 flex-1 overflow-auto">
+        <div className="drill-scroll min-h-0 flex-1 overflow-auto" key={`${title}|${subtitle}|${totalRows}`}>
           {shown.map((sec, i) => (
-            <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} q={q} rep={rep} single={shown.length === 1} expandAll={expandAll} />
+            <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} rep={rep} single={shown.length === 1} expandAll={expandAll} />
           ))}
         </div>
       </div>
