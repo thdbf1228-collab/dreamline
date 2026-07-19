@@ -16,7 +16,7 @@ const COLUMNS = {
     { key: 'est_amount', label: '예상매출', w: '8em', money: true, right: true },
     { key: 'confirmed_amount', label: '계약금액', w: '8em', money: true, right: true },
     { key: 'win_prob', label: '성공확률', w: '6em', right: true },
-    { key: 'lost_reason', label: '실패구분', w: '14em', long: true },
+    { key: 'lost_reason', label: '실패구분', w: '8em' },
     { key: 'channel', label: '인지경로', w: '8em' },
     { key: 'start_date', label: '시작일', w: '7em' },
     { key: 'end_date', label: '종료일', w: '7em' },
@@ -66,32 +66,36 @@ const SUM_KEY = { opp: 'est_amount', con: 'supply_amount' }
 
 const valOf = (r, c) => r[c.key] ?? (c.alt ? r[c.alt] : null)
 
-function Cell({ v, c }) {
+function Cell({ v, c, expandAll }) {
   const [open, setOpen] = useState(false)
+  useEffect(() => { if (expandAll) setOpen(expandAll.val) }, [expandAll])
   if (v == null || v === '') return <span className="text-ink-300">-</span>
   if (c.money) return won(v)
   const text = String(v)
   if (!c.long) return text
 
-  // 한글 1자 ≈ 1em, 영문/숫자 ≈ 0.5em 로 표시 폭 추정
+  // 한글 1자 ≈ 1em, 영문/숫자 ≈ 0.5em → 2줄(약 42em)을 넘을 때만 펼치기
   let em = 0
   for (const ch of text) em += ch.charCodeAt(0) > 127 ? 1 : 0.5
-  const limit = 21 // 컬럼 폭(22em)보다 살짝 작게
-  const overflow = em > limit || text.includes('\n')
+  const lines = text.split('\n').length
+  const overflow = em > 41 || lines > 2
   if (!overflow) return <span className="whitespace-pre-line">{text}</span>
 
   return (
-    <span className="inline-block w-full">
-      <span className={open ? 'block whitespace-pre-line' : 'block truncate'}>{text}</span>
+    <span className="relative block">
+      <span className={open ? 'block whitespace-pre-line' : 'block whitespace-pre-line line-clamp-2'}>{text}</span>
       <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
-        className="mt-0.5 text-[11px] text-brand hover:underline">{open ? '접기' : '펼치기'}</button>
+        className={`text-[11px] text-brand hover:underline ${open ? 'mt-0.5' : 'absolute bottom-0 right-0 bg-paper pl-1 shadow-[-6px_0_6px_-4px_rgba(255,255,255,1)]'}`}>
+        {open ? '접기' : '펼치기'}
+      </button>
     </span>
   )
 }
 
+
 const colsFor = (kind, hide = []) => (COLUMNS[kind] || COLUMNS.opp).filter((c) => !hide.includes(c.key))
 
-function Section({ kind, rows, hide, q, rep, single }) {
+function Section({ kind, rows, hide, q, rep, single, expandAll }) {
   const cols = useMemo(() => colsFor(kind, hide), [kind, hide])
   const list = useMemo(() => {
     let out = rows
@@ -136,7 +140,7 @@ function Section({ kind, rows, hide, q, rep, single }) {
                       <td key={c.key}
                         className={`px-3 py-2 text-xs leading-relaxed ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.long ? 'align-top' : 'whitespace-nowrap align-top'}`}
                         style={c.long ? { maxWidth: c.w, width: c.w } : undefined}>
-                        <Cell v={v} c={c} />
+                        <Cell v={v} c={c} expandAll={expandAll} />
                       </td>
                     )
                   })}
@@ -154,7 +158,9 @@ function Section({ kind, rows, hide, q, rep, single }) {
 export default function DrillModal({ open, onClose, title, subtitle, sections = [] }) {
   const [q, setQ] = useState('')
   const [rep, setRep] = useState('all')
-  useEffect(() => { if (open) { setQ(''); setRep('all') } }, [open])
+  const [expandAll, setExpandAll] = useState(null)
+  const seq = () => ({ seq: Date.now() })
+  useEffect(() => { if (open) { setQ(''); setRep('all'); setExpandAll(null) } }, [open])
   useEffect(() => {
     if (!open) return
     const h = (e) => { if (e.key === 'Escape') onClose() }
@@ -210,13 +216,17 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
                 {repOptions.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             )}
+            <div className="flex overflow-hidden rounded-lg border border-line">
+              <button onClick={() => setExpandAll({ val: true, ...seq() })} className="px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">모두 펼치기</button>
+              <button onClick={() => setExpandAll({ val: false, ...seq() })} className="border-l border-line px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">모두 접기</button>
+            </div>
             <button onClick={download} className="rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">엑셀 다운로드</button>
             <button onClick={onClose} className="rounded-lg bg-canvas px-2.5 py-1.5 text-sm text-ink-600 hover:bg-line">닫기</button>
           </div>
         </div>
         <div className="drill-scroll min-h-0 flex-1 overflow-auto">
           {shown.map((sec, i) => (
-            <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} q={q} rep={rep} single={shown.length === 1} />
+            <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} q={q} rep={rep} single={shown.length === 1} expandAll={expandAll} />
           ))}
         </div>
       </div>
