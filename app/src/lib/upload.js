@@ -7,7 +7,13 @@ async function readRows(file) {
   const buf = await file.arrayBuffer()
   const wb = XLSX.read(buf, { type: 'array' })
   const ws = wb.Sheets[wb.SheetNames[0]]
-  return XLSX.utils.sheet_to_json(ws, { defval: '', raw: true })
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true })
+  // 헤더 앞뒤 공백/개행 제거 — '활동내용 ' 처럼 공백이 섞여도 읽히도록
+  return raw.map((r) => {
+    const o = {}
+    for (const k of Object.keys(r)) o[String(k).replace(/\s+/g, ' ').trim()] = r[k]
+    return o
+  })
 }
 
 function uniqBy(arr, key) {
@@ -186,6 +192,9 @@ export async function ingestActivities(file, log = () => {}, replace = false) {
       activity_date: parseDate(r['활동일시']),
     }
   })
+
+  const filledContent = acts.filter((a) => a.activity_content).length
+  log(`활동내용 읽힘: ${filledContent}/${acts.length}건` + (filledContent === 0 ? ' ⚠ 엑셀에 활동내용 열이 없거나 이름이 다릅니다' : ''))
 
   if (replace) { const { error: de } = await supabase.from('activities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업활동 삭제 실패: ' + de.message); log('기존 영업활동 전체 삭제 후 교체') }
   const { error } = await supabase.from('activities').upsert(acts, { onConflict: 'external_id' })

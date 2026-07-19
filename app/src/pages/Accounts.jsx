@@ -41,9 +41,7 @@ export default function Accounts() {
       title: `${d.account_name || ''} · ${d.title || ''}`.trim(),
       subtitle: `영업기회ID ${oid}`,
       sections: [
-        { kind: 'opp', rows: [d] },
-        { kind: 'act', rows: (acts || []).filter((a) => String(a.opportunity_external_id) === String(oid)).map((a) => ({ ...a, _opp_title: oppTitle })) },
-        { kind: 'con', rows: (cons || []).filter((c) => String(c.opportunity_external_id) === String(oid)).map((c) => ({ ...c, _opp_title: oppTitle })) },
+        { kind: 'act', rows: (acts || []).filter((a) => String(a.opportunity_external_id) === String(oid)).map((a) => ({ ...a, _opp_title: oppTitle })).sort((x, y) => String(x.activity_date || '').localeCompare(String(y.activity_date || ''))), hide: ['external_id', 'opportunity_external_id'] },
       ],
     })
   }
@@ -53,7 +51,7 @@ export default function Accounts() {
       <header>
         <h1 className="text-xl font-bold text-ink-900">파이프라인 현황</h1>
         <p className="text-sm text-ink-500">
-          <button type="button" onClick={() => setDrill({ title: '파이프라인 백데이터', subtitle: '현재 필터 기준', sections: [{ kind: 'opp', rows: filtered }] })} className="underline-offset-4 hover:underline hover:text-ink-800">{num(filtered.length)}건</button>
+          <button type="button" onClick={() => setDrill({ title: '파이프라인 백데이터', subtitle: '현재 필터 기준', sections: [{ kind: 'opp', rows: filtered, hide: ['external_id', 'product', 'est_amount', 'confirmed_amount', 'win_prob'] }] })} className="underline-offset-4 hover:underline hover:text-ink-800">{num(filtered.length)}건</button>
           {' / 전체 '}{num((rows || []).length)}건
         </p>
       </header>
