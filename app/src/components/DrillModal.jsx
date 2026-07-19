@@ -169,22 +169,16 @@ function Section({ kind, rows, hide, rep, single, expandAll }) {
 }
 
 // sections: [{ kind:'opp'|'act'|'con', rows:[], hide:['키'] }]
-export default function DrillModal({ open, onClose, title, subtitle, sections = [] }) {
+// 열릴 때마다 새로 마운트되는 본문 — 펼침/필터 상태가 자동 초기화됨
+function DrillBody({ onClose, title, subtitle, sections }) {
   const [rep, setRep] = useState('all')
   const [expandAll, setExpandAll] = useState(null)
   const seq = () => ({ seq: Date.now() })
-  useEffect(() => { if (open) { setRep('all'); setExpandAll(null) } }, [open, title, subtitle])
-  useEffect(() => {
-    if (!open) return
-    const h = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [open, onClose])
 
   const repOptions = useMemo(() => {
-    const s = new Set()
-    for (const sec of sections) for (const r of sec.rows || []) if (r.rep_name) s.add(r.rep_name)
-    return [...s].sort()
+    const set = new Set()
+    for (const sec of sections) for (const r of sec.rows || []) if (r.rep_name) set.add(r.rep_name)
+    return [...set].sort()
   }, [sections])
 
   function download() {
@@ -206,43 +200,57 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
     URL.revokeObjectURL(a.href)
   }
 
+  const shown = sections.filter((x) => (x.rows || []).length > 0 || sections.length === 1)
+  const totalRows = sections.reduce((acc, x) => acc + (x.rows?.length || 0), 0)
+
+  return (
+    <div className="relative flex max-h-[90vh] w-full max-w-[98vw] flex-col rounded-xl bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3.5">
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-bold text-ink-900">{title}</h3>
+          <p className="mt-0.5 text-xs text-ink-500">{subtitle ? subtitle + ' · ' : ''}총 {num(totalRows)}건</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {repOptions.length > 1 && (
+            <select value={rep} onChange={(e) => setRep(e.target.value)}
+              className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
+              <option value="all">담당자 전체</option>
+              {repOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          )}
+          <div className="flex overflow-hidden rounded-lg border border-line">
+            <button onClick={() => setExpandAll({ val: true, ...seq() })}
+              className={`px-2.5 py-1.5 text-sm ${expandAll?.val === true ? 'bg-ink-900 font-semibold text-white' : 'text-ink-600 hover:bg-canvas'}`}>모두 펼치기</button>
+            <button onClick={() => setExpandAll({ val: false, ...seq() })}
+              className={`border-l border-line px-2.5 py-1.5 text-sm ${expandAll?.val === false ? 'bg-ink-900 font-semibold text-white' : 'text-ink-600 hover:bg-canvas'}`}>모두 접기</button>
+          </div>
+          <button onClick={download} className="rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">엑셀 다운로드</button>
+          <button onClick={onClose} className="rounded-lg bg-canvas px-2.5 py-1.5 text-sm text-ink-600 hover:bg-line">닫기</button>
+        </div>
+      </div>
+      <div className="drill-scroll min-h-0 flex-1 overflow-auto">
+        {shown.map((sec, i) => (
+          <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} rep={rep} single={shown.length === 1} expandAll={expandAll} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function DrillModal({ open, onClose, title, subtitle, sections = [] }) {
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [open, onClose])
+
   if (!open) return null
-  const shown = sections.filter((s) => (s.rows || []).length > 0 || sections.length === 1)
-  const totalRows = sections.reduce((s, x) => s + (x.rows?.length || 0), 0)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-ink-900/40" />
-      <div className="relative flex max-h-[90vh] w-full max-w-[98vw] flex-col rounded-xl bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3.5">
-          <div className="min-w-0">
-            <h3 className="truncate text-base font-bold text-ink-900">{title}</h3>
-            <p className="mt-0.5 text-xs text-ink-500">{subtitle ? subtitle + ' · ' : ''}총 {num(totalRows)}건</p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {repOptions.length > 1 && (
-              <select value={rep} onChange={(e) => setRep(e.target.value)}
-                className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
-                <option value="all">담당자 전체</option>
-                {repOptions.map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-            )}
-            <div className="flex overflow-hidden rounded-lg border border-line">
-              <button onClick={() => setExpandAll({ val: true, ...seq() })}
-                className={`px-2.5 py-1.5 text-sm ${expandAll?.val === true ? 'bg-ink-900 font-semibold text-white' : 'text-ink-600 hover:bg-canvas'}`}>모두 펼치기</button>
-              <button onClick={() => setExpandAll({ val: false, ...seq() })}
-                className={`border-l border-line px-2.5 py-1.5 text-sm ${expandAll?.val === false ? 'bg-ink-900 font-semibold text-white' : 'text-ink-600 hover:bg-canvas'}`}>모두 접기</button>
-            </div>
-            <button onClick={download} className="rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink-600 hover:bg-canvas">엑셀 다운로드</button>
-            <button onClick={onClose} className="rounded-lg bg-canvas px-2.5 py-1.5 text-sm text-ink-600 hover:bg-line">닫기</button>
-          </div>
-        </div>
-        <div className="drill-scroll min-h-0 flex-1 overflow-auto" key={`${title}|${subtitle}|${totalRows}`}>
-          {shown.map((sec, i) => (
-            <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} rep={rep} single={shown.length === 1} expandAll={expandAll} />
-          ))}
-        </div>
-      </div>
+      <DrillBody key={`${title}|${subtitle}|${sections.length}`} onClose={onClose} title={title} subtitle={subtitle} sections={sections} />
     </div>
   )
 }

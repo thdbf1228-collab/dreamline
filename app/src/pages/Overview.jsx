@@ -127,7 +127,7 @@ export default function Overview() {
                     <td className="px-3 py-2.5 text-right tnum font-semibold cursor-pointer hover:underline" style={{ color: C_OPP }}
                       onClick={() => setDrill({ title: `${g.name} 종료(성공)`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(성공)'), hide: ['external_id', 'product', 'est_amount', 'confirmed_amount', 'win_prob', 'channel'] }] })}>{rt.winRate.toFixed(0)}%</td>
                     <td className="px-5 py-2.5 text-right tnum text-lost font-semibold cursor-pointer hover:underline"
-                      onClick={() => setDrill({ title: `${g.name} 실패·보류`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(실패)' || r.status === '보류·연기'), hide: ['external_id', 'product', 'est_amount', 'confirmed_amount', 'win_prob', 'channel'] }] })}>{rt.lostRate.toFixed(0)}%</td>
+                      onClick={() => setDrill({ title: `${g.name} 실패·보류`, subtitle: periodLabel, sections: [{ kind: 'opp', rows: g.rows.filter((r) => r.status === '종료(실패)' || r.status === '보류/연기'), hide: ['external_id', 'product', 'est_amount', 'confirmed_amount', 'win_prob', 'channel'] }] })}>{rt.lostRate.toFixed(0)}%</td>
                   </tr>
                 )
               })}
