@@ -1,0 +1,88 @@
+# 드림라인 영업 파이프라인 대시보드
+
+Vite + React + Tailwind + Supabase. 로그인 / 좌측 nav(전체·그룹별·거래처별·담당자별) / 관리자 업로드 / 담당자 관리.
+
+## 0. 사전: Supabase SQL 실행 순서
+1. `schema_v2.sql` — 테이블·뷰·RLS
+2. `seed_reps.sql` — 그룹 3개 + 담당자 14명
+3. `storage_policy.sql` — 사진용 `rep-photos` 공개 버킷
+
+검증: `select label from public.pipeline_stages order by sort_order;` → 기회인지/제안/견적/계약/개통완료
+
+## 1. 관리자 계정 만들기
+Supabase 대시보드 → Authentication → Users → **Add user** (이메일·비밀번호, auto-confirm).
+그다음 SQL Editor에서:
+```sql
+update public.profiles set role='admin' where email='너계정@dreamline.co.kr';
+```
+(가입하면 트리거가 profiles를 viewer로 자동 생성 → 위 쿼리로 admin 승격)
+
+## 2. 배포 (Vercel)
+1. 이 폴더를 GitHub 새 repo에 업로드 (`node_modules`는 빼고 — `.gitignore`에 이미 있음)
+2. Vercel → New Project → 그 repo import (Framework: Vite 자동감지)
+3. **Environment Variables** 두 개 등록 (Supabase → Settings → API에서 복사):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Deploy
+
+로컬 실행 시: `.env.example`을 `.env`로 복사해 같은 값 채우고 `npm install && npm run dev`.
+
+## 3. 사용
+- 로그인 → 좌측 nav로 이동. **설정·업로드**는 관리자에게만 보임.
+- **설정·업로드**: 영업기회 / 계약 엑셀을 올리면 영업기회ID 기준으로 갱신(upsert).
+  - 영업기회 → 계약 순으로 처리됨. 영업기회에 없는 계약은 자동 제외.
+- **담당자 관리**: 그룹 배정 + 얼굴 사진 업로드.
+
+## 동작 규칙 (참고)
+- 표시 금액 = 계약 있으면 공급가액 합산(확정), 없으면 예상매출(추정) — `v_opportunities.display_amount`.
+- 단계: 기회인지 → 제안 → 견적 → 계약 → 개통완료. 진행상태는 별도.
+- 담당자 육각형은 담당자 전체 대비 상대값(min-max, 바닥 보정). 옆 숫자가 실제 절대값.
+- 금액 단위는 원본 파일 기준 '천원' → 화면에선 만/억으로 환산 표기.
+
+## v2 업데이트 적용 (이번 변경)
+1. **`update_view_60d.sql` 실행** — 정체 기준 14→60일.
+2. **`seed_reps.sql` 다시 실행** — 1·2·3그룹 + 담당자 그룹배정 (설정 드랍다운/그룹별 정상화).
+3. **비밀번호 재설정 메일** 쓰려면:
+   - Authentication → **SMTP Settings**에 커스텀 SMTP 등록 (사내 메일 서버 또는 Resend/SendGrid 등). 기본 발송은 시간당 2통 + 팀원 외 주소 거부라 운영 불가.
+   - Authentication → **URL Configuration → Redirect URLs**에 배포 주소(예: `https://your-app.vercel.app`) 추가. 안 하면 재설정 링크가 되돌아오지 못함.
+4. 담당자 관리에서 각 담당자 **이메일** 입력 (재설정 메일 발송 대상).
+
+## 변경 요약
+- 전체현황: 기업/글로벌 토글, '전체 건수' KPI, 진행상태 분포 바, 정체 60일.
+- 거래처별: 단계별 파이프라인 보드 + 필터(매출구분/그룹/담당자/상태/검색), 242건 전부.
+- 담당자별: 육각형 꼭짓점 라벨, 좌우 하단 정렬, 큰 파이프라인, 기업/글로벌 토글.
+- 로그인: 비밀번호 찾기(재설정 메일) + 새 비번 설정 화면.
+
+## v3 업데이트 (이번 변경)
+**SQL 실행:** `add_password_flag.sql` (비번 강제변경 플래그). 그룹 안 보이면 설정 화면의 "그룹 관리"에서 직접 추가하거나 `seed_reps.sql` 재실행.
+
+**변경 요약**
+- 거래처별: 캡처 스타일 카드(단계 진행 트래커 + 상태/그룹/기한초과 배지 + 사유 + 상세 펼침), 필터·검색, 242건 전부.
+- 전체현황: KPI를 금액으로 통일(전체 금액 / 진행 파이프라인 금액 / 확정매출 금액 + 전환율).
+- 담당자별: 이름·그룹을 육각형 중앙선에 정렬, '담당 거래처' KPI 제거.
+- 월별 탭 신규(시작일 기준 추이 + 월별 KPI/파이프라인).
+- 설정: 그룹 관리(추가/삭제), 담당자 추가/수정/삭제, 계정 관리(권한·비번 초기화 요청). 이메일 필드 제거.
+
+**비밀번호 운영 (수기 + 강제변경)**
+1. 계정 생성·비번 리셋은 Supabase 대시보드(Authentication → Add user / 비번 변경)에서. 초기 비번 1111 권장.
+2. 설정 → 계정 관리에서 해당 계정 "비번 초기화 요청"(= 강제변경 플래그 ON).
+3. 그 계정 로그인 시 "새 비밀번호 설정" 강제 화면이 뜨고, 1111은 새 비번으로 못 쓰게 막힘. 변경하면 플래그 자동 해제.
+- ※ 비밀번호 원문은 보안상 표기 불가(해시 저장). 앱에서 관리자가 직접 비번을 입력해 리셋하려면 Edge Function 별도 배포 필요.
+
+## v3 업데이트
+**SQL:** `update_auth.sql` 실행 (must_change_password 컬럼).
+
+**비밀번호 1111 초기화 버튼 → Edge Function 배포 필요 (1회):**
+1. Supabase 대시보드 → **Edge Functions** → Create function → 이름 `reset-password`
+2. `supabase/functions/reset-password/index.ts` 내용 전체 붙여넣기 → **Deploy**
+   - (또는 CLI: `supabase functions deploy reset-password`)
+   - 별도 시크릿 설정 불필요 — URL/키가 함수 환경에 자동 주입됨.
+3. 배포되면 담당자 관리의 "비밀번호 변경" 버튼이 그 담당자 아이디(이메일) 계정을 1111로 초기화하고 다음 로그인 시 변경을 강제함. (대상 계정이 Supabase에 먼저 존재해야 함)
+
+**그룹:** 설정 → 그룹 관리에서 1·2·3그룹 추가하면 담당자 드랍다운에 즉시 반영(별도 SQL 불필요).
+
+## v3 변경 요약
+- 담당자 관리: 그룹 상태 공유(드랍다운 즉시 갱신), 그룹 추가/삭제, 담당자 추가(이름/그룹/아이디/사진)·수정·삭제, 아이디(이메일) 표기, 비번 1111 초기화 버튼.
+- 계정 패널(비번 초기화 요청) 제거.
+- 거래처별 카드: 제목 2줄 고정·사유 2줄 clamp로 정렬, 단계바 5색.
+- 모든 파이프라인(깔때기) 색을 거래처별 5색으로 통일.
