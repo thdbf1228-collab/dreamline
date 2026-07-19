@@ -5,7 +5,7 @@ import { won, num } from '../lib/format'
 const COLUMNS = {
   opp: [
     { key: 'external_id', label: '영업기회ID', w: '7em' },
-    { key: 'title', label: '영업기회', w: '24em' },
+    { key: 'title', label: '영업기회', w: '24em', clamp: 30 },
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'rep_name', label: '담당자', w: '6em' },
     { key: 'group_name', label: '그룹', w: '5em' },
@@ -21,7 +21,7 @@ const COLUMNS = {
     { key: 'start_date', label: '시작일', w: '7em' },
     { key: 'end_date', label: '종료일', w: '7em' },
     { key: 'registered_at', label: '등록일', w: '7em' },
-    { key: 'note', label: '비고', w: '18em' },
+    { key: 'note', label: '비고', w: '14em', clamp: 15 },
   ],
   act: [
     { key: 'external_id', label: '영업활동ID', w: '7em' },
@@ -32,7 +32,7 @@ const COLUMNS = {
     { key: 'group_name', label: '그룹', w: '5em' },
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
-    { key: 'opportunity_title', label: '영업기회명', w: '18em', alt: '_opp_title' },
+    { key: 'opportunity_title', label: '영업기회명', w: '26em', alt: '_opp_title', wrap: true },
     { key: 'plan_content', label: '계획내용', w: '26em', wrap: true },
     { key: 'activity_content', label: '활동내용', w: '32em', wrap: true },
     { key: 'related_product', label: '연관제품', w: '10em' },
@@ -46,7 +46,7 @@ const COLUMNS = {
   con: [
     { key: 'external_id', label: '계약ID', w: '6em' },
     { key: 'contract_date', label: '계약일', w: '7em' },
-    { key: 'title', label: '계약명', w: '26em' },
+    { key: 'title', label: '계약명', w: '24em', clamp: 30 },
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'rep_name', label: '담당자', w: '6em' },
     { key: 'group_name', label: '그룹', w: '5em' },
@@ -57,14 +57,31 @@ const COLUMNS = {
     { key: 'start_date', label: '시작일', w: '7em' },
     { key: 'end_date', label: '종료일', w: '7em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
-    { key: 'opportunity_title', label: '영업기회명', w: '18em', alt: '_opp_title' },
-    { key: 'note', label: '비고', w: '16em' },
+    { key: 'opportunity_title', label: '영업기회명', w: '22em', alt: '_opp_title', wrap: true },
+    { key: 'note', label: '비고', w: '14em', clamp: 15 },
   ],
 }
 const KIND_LABEL = { opp: '영업기회', act: '영업활동', con: '계약' }
 const SUM_KEY = { opp: 'est_amount', con: 'supply_amount' }
 
 const valOf = (r, c) => r[c.key] ?? (c.alt ? r[c.alt] : null)
+
+function Cell({ v, c }) {
+  const [open, setOpen] = useState(false)
+  if (v == null || v === '') return <span className="text-ink-300">-</span>
+  if (c.money) return won(v)
+  const text = String(v)
+  if (c.clamp && text.length > c.clamp) {
+    return (
+      <span className={open ? 'whitespace-pre-line' : ''}>
+        {open ? text : text.slice(0, c.clamp) + '…'}
+        <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+          className="ml-1 shrink-0 text-[11px] text-brand hover:underline">{open ? '접기' : '펼치기'}</button>
+      </span>
+    )
+  }
+  return text
+}
 const colsFor = (kind, hide = []) => (COLUMNS[kind] || COLUMNS.opp).filter((c) => !hide.includes(c.key))
 
 function Section({ kind, rows, hide, q, rep, single }) {
@@ -92,8 +109,8 @@ function Section({ kind, rows, hide, q, rep, single }) {
       {list.length === 0 ? (
         <p className="py-6 text-center text-sm text-ink-400">해당 데이터 없음</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div>
+          <table className="w-max min-w-full text-sm">
             <thead className="bg-canvas text-xs text-ink-500">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">#</th>
@@ -110,9 +127,9 @@ function Section({ kind, rows, hide, q, rep, single }) {
                     const v = valOf(r, c)
                     return (
                       <td key={c.key}
-                        className={`px-3 py-2 ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.wrap ? 'whitespace-pre-line text-xs leading-relaxed' : 'whitespace-nowrap'}`}
+                        className={`px-3 py-2 ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.wrap ? 'whitespace-pre-line text-xs leading-relaxed align-top' : c.clamp ? 'align-top' : 'whitespace-nowrap'}`}
                         style={c.wrap ? { maxWidth: '32em' } : undefined}>
-                        {v == null || v === '' ? <span className="text-ink-300">-</span> : c.money ? won(v) : String(v)}
+                        <Cell v={v} c={c} />
                       </td>
                     )
                   })}
@@ -190,7 +207,7 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
             <button onClick={onClose} className="rounded-lg bg-canvas px-2.5 py-1.5 text-sm text-ink-600 hover:bg-line">닫기</button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="drill-scroll min-h-0 flex-1 overflow-auto">
           {shown.map((sec, i) => (
             <Section key={i} kind={sec.kind} rows={sec.rows || []} hide={sec.hide || []} q={q} rep={rep} single={shown.length === 1} />
           ))}
