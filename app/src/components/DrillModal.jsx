@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { won, num } from '../lib/format'
 
 // 실제 DB(업로드 엑셀) 저장 컬럼 기준
@@ -68,19 +68,22 @@ const valOf = (r, c) => r[c.key] ?? (c.alt ? r[c.alt] : null)
 
 function Cell({ v, c, expandAll }) {
   const [open, setOpen] = useState(false)
+  const [canExpand, setCanExpand] = useState(false)
+  const ref = useRef(null)
   useEffect(() => { if (expandAll) setOpen(expandAll.val) }, [expandAll])
+  // 실제로 2줄을 넘겨 잘렸을 때만 펼치기 노출 (글자수 추정 X)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || open) return
+    const truncated = el.scrollHeight > el.clientHeight + 1
+    setCanExpand((prev) => (prev === truncated ? prev : truncated))
+  })
+
   if (v == null || v === '') return <span className="text-ink-300">-</span>
   if (c.money) return won(v)
   const text = String(v)
   if (!c.long) return text
 
-  // 한글 1자 ≈ 1em, 영문/숫자 ≈ 0.5em → 2줄(약 42em) 초과 또는 3줄 이상일 때만 펼치기
-  let em = 0
-  for (const ch of text) em += ch.charCodeAt(0) > 127 ? 1 : 0.5
-  const overflow = em > 41 || text.split('\n').length > 2
-  if (!overflow) return <span className="whitespace-pre-line">{text}</span>
-
-  // display 충돌 방지를 위해 인라인 스타일로 2줄 고정
   const clampStyle = {
     display: '-webkit-box',
     WebkitBoxOrient: 'vertical',
@@ -92,16 +95,19 @@ function Cell({ v, c, expandAll }) {
 
   return (
     <span className="relative block">
-      <span style={open ? openStyle : clampStyle}>{text}</span>
-      <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
-        className={open
-          ? 'mt-0.5 text-[11px] text-brand hover:underline'
-          : 'absolute bottom-0 right-0 bg-paper pl-1 text-[11px] text-brand hover:underline'}>
-        {open ? '접기' : '펼치기'}
-      </button>
+      <span ref={ref} style={open ? openStyle : clampStyle}>{text}</span>
+      {canExpand && (
+        <button type="button" onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+          className={open
+            ? 'mt-0.5 text-[11px] text-brand hover:underline'
+            : 'absolute bottom-0 right-0 bg-paper pl-1 text-[11px] text-brand hover:underline'}>
+          {open ? '접기' : '펼치기'}
+        </button>
+      )}
     </span>
   )
 }
+
 
 
 
@@ -133,12 +139,12 @@ function Section({ kind, rows, hide, q, rep, single, expandAll }) {
         <p className="py-6 text-center text-sm text-ink-400">해당 데이터 없음</p>
       ) : (
         <div>
-          <table className="w-max min-w-full text-sm">
-            <thead className="bg-canvas text-xs text-ink-500">
+          <table className="w-full table-fixed text-sm">
+            <thead className="sticky top-0 z-20 bg-canvas text-xs text-ink-500 shadow-[0_1px_0_0_rgba(0,0,0,0.08)]">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">#</th>
                 {cols.map((c) => (
-                  <th key={c.key} className={`whitespace-nowrap px-3 py-2 font-medium ${c.right ? 'text-right' : 'text-left'}`} style={{ minWidth: c.w }}>{c.label}</th>
+                  <th key={c.key} className={`whitespace-nowrap px-3 py-2 font-medium ${c.right ? 'text-right' : 'text-left'}`} style={{ width: c.w }}>{c.label}</th>
                 ))}
               </tr>
             </thead>
@@ -212,7 +218,7 @@ export default function DrillModal({ open, onClose, title, subtitle, sections = 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-ink-900/40" />
-      <div className="relative flex max-h-[90vh] w-full max-w-[95rem] flex-col rounded-xl bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="relative flex max-h-[90vh] w-full max-w-[98vw] flex-col rounded-xl bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-3.5">
           <div className="min-w-0">
             <h3 className="truncate text-base font-bold text-ink-900">{title}</h3>
