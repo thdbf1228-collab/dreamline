@@ -131,7 +131,7 @@ export default function Activity() {
           if (year !== 'all') r = r.filter((x) => (x.activity_date || '').slice(0, 4) === year)
           if (rep) r = r.filter((x) => x.rep_name === rep)
           if (period) r = r.filter((x) => (x.activity_date || '').slice(0, 7) === period)
-          setDrill({ title: `${rep || '전체'} 영업활동`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), sections: [{ kind: 'act', rows: r.map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })), hide: ['external_id', 'opportunity_external_id', 'plan_content', 'related_product', 'start_time', 'end_time', 'customer_name', 'companion', 'participants', 'registered_by'] }] })
+          setDrill({ title: `${rep || '전체'} 영업활동`, subtitle: period ? mLabel(period) : (year === 'all' ? '전체' : year + '년'), sections: [{ kind: 'act', rows: r.map((x) => ({ ...x, _opp_title: oppTitle(x.opportunity_external_id) })), hide: ['external_id', 'opportunity_external_id', 'related_product', 'start_time', 'end_time', 'customer_name', 'companion', 'participants', 'registered_by'] }] })
         }} />
       </Card>
 

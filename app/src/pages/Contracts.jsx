@@ -27,7 +27,7 @@ export default function Contracts() {
       title: `${c.account_name || ''} · ${c.title || '계약'}`.trim(),
       subtitle: oid ? `영업기회ID ${oid}${c._merged > 1 ? ` · ${c._merged}건 합산` : ''}` : '영업기회 미연결',
       sections: [
-        { kind: 'con', rows: rawCons, hide: ['external_id', 'opportunity_external_id', 'opportunity_title', 'note'] },
+        { kind: 'con', rows: rawCons, hide: ['external_id', 'opportunity_external_id', 'opportunity_title'] },
       ],
     })
   }
@@ -96,7 +96,7 @@ export default function Contracts() {
             <div className="flex items-center justify-between px-5 py-3 border-b border-line bg-canvas">
               <span className="text-base font-bold text-ink-900">{monthLabel(m.month)}</span>
               <span className="text-sm text-ink-500 cursor-pointer hover:underline"
-                onClick={() => { const rs = valid.filter((c) => (c.contract_date || '').slice(0, 7) === m.month); setDrill({ title: `${monthLabel(m.month)} 계약`, subtitle: '합산 전 원본', sections: [{ kind: 'con', rows: rs, hide: ['external_id', 'opportunity_external_id', 'opportunity_title', 'note'] }] }) }}>
+                onClick={() => { const rs = valid.filter((c) => (c.contract_date || '').slice(0, 7) === m.month); setDrill({ title: `${monthLabel(m.month)} 계약`, subtitle: '합산 전 원본', sections: [{ kind: 'con', rows: rs, hide: ['external_id', 'opportunity_external_id', 'opportunity_title'] }] }) }}>
                 {m.list.length}건 · <b className="text-brand tnum">{won(m.sum)}</b></span>
             </div>
             <div className="overflow-x-auto">

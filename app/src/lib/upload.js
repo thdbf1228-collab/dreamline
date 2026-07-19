@@ -131,6 +131,7 @@ export async function ingestContracts(file, log = () => {}, replace = false) {
       product: String(r['연관제품'] || '').trim() || null,
       line_count: parseInt0(r['회선수']),
       contract_type: String(r['계약구분'] || '').trim() || null,
+      related_product: String(r['연관제품'] || '').trim() || null,
       contract_date: parseDate(r['계약일']),
       start_date: parseDate(r['시작일']),
       end_date: parseDate(r['종료일']),

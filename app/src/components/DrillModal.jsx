@@ -50,13 +50,12 @@ const COLUMNS = {
     { key: 'account_name', label: '고객사', w: '12em' },
     { key: 'rep_name', label: '담당자', w: '6em' },
     { key: 'group_name', label: '그룹', w: '5em' },
-    { key: 'contract_type', label: '계약구분', w: '7em' },
+    { key: 'related_product', label: '연관제품', w: '11em' },
     { key: 'supply_amount', label: '공급가액', w: '8em', money: true, right: true },
     { key: 'tax_amount', label: '세액', w: '7em', money: true, right: true },
     { key: 'total_amount', label: '합계금액', w: '8em', money: true, right: true },
     { key: 'start_date', label: '시작일', w: '7em' },
     { key: 'end_date', label: '종료일', w: '7em' },
-    { key: 'renewal_date', label: '갱신예정일', w: '8em' },
     { key: 'opportunity_external_id', label: '영업기회ID', w: '7em' },
     { key: 'opportunity_title', label: '영업기회명', w: '18em', alt: '_opp_title' },
     { key: 'note', label: '비고', w: '16em' },
@@ -111,7 +110,7 @@ function Section({ kind, rows, hide, q, rep, single }) {
                     const v = valOf(r, c)
                     return (
                       <td key={c.key}
-                        className={`px-3 py-2 ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.wrap ? 'whitespace-pre-line text-xs leading-relaxed' : ''}`}
+                        className={`px-3 py-2 ${c.right ? 'text-right tnum font-semibold text-ink-800' : 'text-ink-700'} ${c.wrap ? 'whitespace-pre-line text-xs leading-relaxed' : 'whitespace-nowrap'}`}
                         style={c.wrap ? { maxWidth: '32em' } : undefined}>
                         {v == null || v === '' ? <span className="text-ink-300">-</span> : c.money ? won(v) : String(v)}
                       </td>

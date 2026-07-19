@@ -52,6 +52,29 @@ function UploadPanel() {
   const oppRef = useRef(); const conRef = useRef(); const actRef = useRef()
   const [busy, setBusy] = useState(false); const [logs, setLogs] = useState([]); const [replace, setReplace] = useState(false)
   const log = (m) => setLogs((l) => [...l, m])
+
+  // DB에 상세 컬럼이 실제로 만들어졌는지 점검
+  async function checkDb() {
+    setLogs([])
+    const need = {
+      v_activities: ['activity_content', 'plan_content', 'opportunity_title', 'related_product', 'start_time', 'end_time', 'customer_name', 'companion', 'participants', 'registered_by'],
+      v_contracts: ['related_product'],
+    }
+    for (const [view, keys] of Object.entries(need)) {
+      const { data, error } = await supabase.from(view).select('*').limit(1)
+      if (error) { log(`${view} 조회 실패: ${error.message}`); continue }
+      if (!data || data.length === 0) { log(`${view}: 데이터가 없어 점검 불가`); continue }
+      const have = Object.keys(data[0])
+      const missing = keys.filter((k) => !have.includes(k))
+      if (missing.length === 0) log(`✅ ${view}: 컬럼 정상 (SQL 실행됨)`)
+      else log(`❌ ${view}: 없는 컬럼 → ${missing.join(', ')}  → add_detail_columns.sql 을 실행하세요`)
+      // 값이 실제로 채워졌는지
+      if (view === 'v_activities' && have.includes('activity_content')) {
+        const { count } = await supabase.from(view).select('id', { count: 'exact', head: true }).not('activity_content', 'is', null)
+        log(`   활동내용이 채워진 행: ${count ?? 0}건` + ((count ?? 0) === 0 ? '  → 영업활동 엑셀을 다시 업로드하세요' : ''))
+      }
+    }
+  }
   async function run() {
     const o = oppRef.current?.files?.[0]; const c = conRef.current?.files?.[0]; const ac = actRef.current?.files?.[0]
     if (!o && !c && !ac) return log('업로드할 파일을 선택하세요.')
@@ -75,6 +98,7 @@ function UploadPanel() {
       <button onClick={run} disabled={busy} className="mt-3 block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
         {busy ? '처리 중…' : (replace ? '전체 교체 업로드' : '업로드 · 반영(누적)')}
       </button>
+      <button onClick={checkDb} className="mt-3 ml-2 rounded-lg border border-line px-3 py-2.5 text-sm text-ink-600 hover:bg-canvas">DB 점검</button>
       {logs.length > 0 && <div className="mt-4 rounded-lg bg-canvas p-3 text-xs text-ink-700 space-y-1 font-mono">{logs.map((l, i) => <div key={i}>{l}</div>)}</div>}
     </Card>
   )
