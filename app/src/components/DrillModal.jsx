@@ -120,8 +120,11 @@ function Section({ kind, rows, hide, rep, single, expandAll, session }) {
   const list = useMemo(() => {
     let out = rows
     if (rep !== 'all') out = out.filter((r) => r.rep_name === rep)
+    // 기본 정렬: 영업활동=활동일시 최신순, 영업기회=시작일 최신순, 계약=계약일 최신순
+    const sortKey = kind === 'act' ? 'activity_date' : kind === 'opp' ? 'start_date' : 'contract_date'
+    out = [...out].sort((a, b) => String(b[sortKey] || '').localeCompare(String(a[sortKey] || '')))
     return out
-  }, [rows, rep])
+  }, [rows, rep, kind])
   const sumKey = SUM_KEY[kind]
   const total = sumKey && cols.some((c) => c.key === sumKey) ? list.reduce((s, r) => s + (Number(r[sumKey]) || 0), 0) : null
 

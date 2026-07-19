@@ -41,7 +41,7 @@ export default function Accounts() {
       title: `${d.account_name || ''} · ${d.title || ''}`.trim(),
       subtitle: `영업기회ID ${oid}`,
       sections: [
-        { kind: 'act', rows: (acts || []).filter((a) => String(a.opportunity_external_id) === String(oid)).map((a) => ({ ...a, _opp_title: oppTitle })).sort((x, y) => String(x.activity_date || '').localeCompare(String(y.activity_date || ''))), hide: ['external_id', 'opportunity_external_id', 'related_product', 'start_time', 'end_time', 'customer_name', 'companion', 'participants', 'registered_by'] },
+        { kind: 'act', rows: (acts || []).filter((a) => String(a.opportunity_external_id) === String(oid)).map((a) => ({ ...a, _opp_title: oppTitle })), hide: ['external_id', 'opportunity_external_id', 'related_product', 'start_time', 'end_time', 'customer_name', 'companion', 'participants', 'registered_by'] },
       ],
     })
   }
