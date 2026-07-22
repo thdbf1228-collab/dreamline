@@ -4,7 +4,7 @@ import { useNotice } from '../data/useNotice'
 
 const NAV = [
   { to: '/', label: '전체', end: true },
-  { to: '/weekly', label: '주간현황' },
+  { to: '/weekly', label: '주간현황', badge: 'NEW' },
   { to: '/accounts', label: '파이프라인' },
   { to: '/contracts', label: '계약' },
   { to: '/activity', label: '활동' },
@@ -41,7 +41,12 @@ export default function Layout({ children }) {
           </div>
         )}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>{n.label}</NavLink>)}
+          {NAV.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>
+              {n.label}
+              {n.badge && <span className="ml-2 rounded bg-lost px-1.5 py-0.5 text-[10px] font-bold text-white align-middle badge-pulse">{n.badge}</span>}
+            </NavLink>
+          ))}
           {isAdmin && (<>
             <div className="pt-3 mt-2 border-t border-line" />
             <NavLink to="/admin" className={sideClass}>관리자</NavLink>
@@ -59,14 +64,19 @@ export default function Layout({ children }) {
           {session && <button onClick={logout} className="shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-600">로그아웃</button>}
         </div>
         <nav className="flex gap-1.5 overflow-x-auto px-3 pb-2">
-          {items.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={pillClass}>{n.label}</NavLink>)}
+          {items.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end} className={pillClass}>
+              {n.label}
+              {n.badge && <span className="ml-1 rounded bg-lost px-1 text-[9px] font-bold text-white badge-pulse">{n.badge}</span>}
+            </NavLink>
+          ))}
         </nav>
       </header>
 
       <main className="flex-1 min-w-0">
         <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8 overflow-x-hidden">
           {showNotice && (
-            <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-wrap">
+            <div className="notice-flash mb-5 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 whitespace-pre-wrap">
               <span className="mr-2 font-bold">📢 공지</span>{notice}
             </div>
           )}
