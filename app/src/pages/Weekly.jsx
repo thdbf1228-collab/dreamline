@@ -189,7 +189,7 @@ export default function Weekly() {
       {/* 그룹별 */}
       <Card className="p-0 overflow-hidden">
         <div className="border-b border-line px-6 py-3 text-sm font-bold text-ink-900">그룹별</div>
-        <div className="px-6">
+        <div className="px-12">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
@@ -227,7 +227,7 @@ export default function Weekly() {
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
         <div className="border-b border-line px-6 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
-        <div className="px-6">
+        <div className="px-12">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
