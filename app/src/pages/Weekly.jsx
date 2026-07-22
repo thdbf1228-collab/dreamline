@@ -151,7 +151,7 @@ export default function Weekly() {
       {/* 일자별 막대 */}
       <Card className="p-4">
         <div className="mb-3 flex items-baseline justify-between">
-          <span className="text-sm font-bold text-ink-900">일자별 <span className="text-xs font-normal text-ink-400">막대 클릭 시 상세</span></span>
+          <span className="text-sm font-bold text-ink-900">날짜별 현황 <span className="text-xs font-normal text-ink-400">막대 클릭 시 상세</span></span>
           <span className="text-xs text-ink-400">
             <span className="mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_OPP }} />영업기회
             <span className="ml-2.5 mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_ACT }} />영업활동
@@ -193,9 +193,9 @@ export default function Weekly() {
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
               <th className="px-5 py-2 text-left font-medium">그룹</th>
-              <th className="px-3 py-2 text-right font-medium">영업기회</th>
-              <th className="px-3 py-2 text-right font-medium">영업활동</th>
-              <th className="px-5 py-2 text-right font-medium">계약</th>
+              <th className="px-3 py-2 text-right font-medium" style={{ width: '9em' }}>영업기회</th>
+              <th className="px-3 py-2 text-right font-medium" style={{ width: '9em' }}>영업활동</th>
+              <th className="px-5 py-2 text-right font-medium" style={{ width: '9em' }}>계약</th>
             </tr>
           </thead>
           <tbody>
@@ -227,9 +227,9 @@ export default function Weekly() {
             <tr>
               <th className="px-5 py-2 text-left font-medium">담당자</th>
               <th className="px-3 py-2 text-left font-medium">그룹</th>
-              <th className="px-3 py-2 text-right font-medium">영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-3 py-2 text-right font-medium">영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-5 py-2 text-right font-medium">이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
+              <th className="px-3 py-2 text-right font-medium" style={{ width: '9em' }}>영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
+              <th className="px-3 py-2 text-right font-medium" style={{ width: '9em' }}>영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
+              <th className="px-5 py-2 text-right font-medium" style={{ width: '9em' }}>이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
             </tr>
           </thead>
           <tbody>
