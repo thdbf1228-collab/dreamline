@@ -150,14 +150,14 @@ export default function Weekly() {
 
       {/* 일자별 막대 */}
       <Card className="p-4">
-        <div className="mb-3 flex items-baseline justify-between">
+        <div className="mb-3 flex items-baseline justify-between px-8">
           <span className="text-sm font-bold text-ink-900">날짜별 현황 <span className="text-xs font-normal text-ink-400">막대 클릭 시 상세</span></span>
           <span className="text-xs text-ink-400">
             <span className="mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_OPP }} />영업기회
             <span className="ml-2.5 mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_ACT }} />영업활동
           </span>
         </div>
-        <div className="flex items-end gap-2.5" style={{ height: 140 }}>
+        <div className="flex items-end gap-2.5 px-8" style={{ height: 140 }}>
           {days.map((d) => {
             return (
               <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
@@ -188,7 +188,7 @@ export default function Weekly() {
 
       {/* 그룹별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별</div>
+        <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별</div>
         <div className="px-12">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
@@ -226,7 +226,7 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
+        <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
         <div className="px-12">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
