@@ -58,6 +58,7 @@ export default function Weekly() {
     for (let i = 6; i >= 0; i--) {
       const d = ymd(addDays(new Date(range.end), -i))
       const dt = new Date(d)
+      if (dt.getDay() === 0 || dt.getDay() === 6) continue // 주말 제외
       arr.push({
         date: d,
         dow: DOW[dt.getDay()],
@@ -144,8 +145,8 @@ export default function Weekly() {
         <div className="mb-3 flex items-baseline justify-between">
           <span className="text-sm font-bold text-ink-900">일자별 <span className="text-xs font-normal text-ink-400">막대 클릭 시 상세</span></span>
           <span className="text-xs text-ink-400">
-            <span className="mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_ACT }} />영업활동
-            <span className="ml-2.5 mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_OPP }} />영업기회
+            <span className="mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_OPP }} />영업기회
+            <span className="ml-2.5 mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_ACT }} />영업활동
           </span>
         </div>
         <div className="flex items-end gap-2.5" style={{ height: 140 }}>
@@ -153,14 +154,17 @@ export default function Weekly() {
             const isToday = d.date === todayStr
             return (
               <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
-                <div className="mb-1 text-[11px] tnum" style={{ color: d.a ? C_ACT : 'var(--ink-300, #cbd2dc)' }}>{d.a}</div>
+                <div className="mb-1 flex gap-1 text-[11px] tnum">
+                  <span style={{ color: d.o ? C_OPP : '#cbd2dc' }}>{d.o}</span>
+                  <span style={{ color: d.a ? C_ACT : '#cbd2dc' }}>{d.a}</span>
+                </div>
                 <div className="flex w-3/5 items-end gap-[3px]" style={{ height: '78%' }}>
-                  <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업활동 ${d.a}건`}
-                    style={{ height: `${(d.a / maxDay) * 100}%`, minHeight: d.a ? 4 : 0, background: C_ACT }}
-                    onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))} />
                   <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업기회 ${d.o}건`}
                     style={{ height: `${(d.o / maxDay) * 100}%`, minHeight: d.o ? 4 : 0, background: C_OPP }}
                     onClick={() => openOpp(cur.o.filter((r) => dOf(r.start_date) === d.date), `${label(d.date)} 신규 영업기회`, label(d.date))} />
+                  <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업활동 ${d.a}건`}
+                    style={{ height: `${(d.a / maxDay) * 100}%`, minHeight: d.a ? 4 : 0, background: C_ACT }}
+                    onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))} />
                 </div>
                 <div className={`mt-1.5 text-[11px] ${isToday ? 'font-bold text-ink-900' : 'text-ink-500'}`}>{isToday ? '오늘 ' : d.dow + ' '}{d.date.slice(8)}</div>
               </div>
@@ -189,11 +193,11 @@ export default function Weekly() {
               return (
                 <tr key={g} className="border-t border-line/70">
                   <td className="px-5 py-2.5 font-semibold text-ink-900">{g}</td>
-                  <td className={`px-3 py-2.5 text-right tnum ${go.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={go.length ? { color: C_OPP } : undefined}
+                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${go.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={go.length ? { color: C_OPP } : undefined}
                     onClick={() => openOpp(go, `${g} 신규 영업기회`)}>{go.length}건</td>
-                  <td className={`px-3 py-2.5 text-right tnum ${ga.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={ga.length ? { color: C_ACT } : undefined}
+                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${ga.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={ga.length ? { color: C_ACT } : undefined}
                     onClick={() => openAct(ga, `${g} 영업활동`)}>{ga.length}건</td>
-                  <td className={`px-5 py-2.5 text-right tnum ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
+                  <td className={`px-5 py-2.5 text-right tnum font-semibold ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
                     onClick={() => openCon(gc, `${g} 계약`)}>{gc.length}건</td>
                 </tr>
               )
@@ -220,9 +224,9 @@ export default function Weekly() {
               <tr key={r.rep} className="border-t border-line/70">
                 <td className="px-5 py-2.5 font-semibold text-ink-900">{r.rep}</td>
                 <td className="px-3 py-2.5 text-ink-500">{r.group}</td>
-                <td className={`px-3 py-2.5 text-right tnum ${r.o ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.o ? { color: C_OPP } : undefined}
+                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.o ? { color: C_OPP } : undefined}
                   onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
-                <td className={`px-3 py-2.5 text-right tnum ${r.a ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.a ? { color: C_ACT } : undefined}
+                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.a ? { color: C_ACT } : undefined}
                   onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
                 <td className="px-5 py-2.5 text-right tnum text-xs">
                   <span className={r.yA ? 'cursor-pointer text-ink-600 hover:underline' : 'text-ink-300'}
@@ -237,22 +241,6 @@ export default function Weekly() {
         </table>
       </Card>
 
-      {/* 이번 주 신규 영업기회 목록 */}
-      <Card className="p-0 overflow-hidden">
-        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">이번 주 신규 영업기회 <span className="text-xs font-normal text-ink-400">시작일 {label(range.start)}~{label(range.end)}</span></div>
-        {cur.o.length === 0 ? (
-          <p className="py-8 text-center text-sm text-ink-400">이번 주 신규 영업기회가 없습니다.</p>
-        ) : (
-          [...cur.o].sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || ''))).slice(0, 15).map((r) => (
-            <div key={r.id} className="flex cursor-pointer items-baseline gap-3 border-t border-line/70 px-5 py-2.5 hover:bg-canvas"
-              onClick={() => openOpp([r], r.title || '영업기회')}>
-              <span className="min-w-[46px] text-xs text-ink-400 tnum">{label(r.start_date || '')}</span>
-              <span className="flex-1 truncate text-sm text-ink-800" title={r.title}>{r.title}</span>
-              <span className="text-xs text-ink-500">{r.rep_name} · {r.group_name}</span>
-            </div>
-          ))
-        )}
-      </Card>
 
       <DrillModal open={!!drill} onClose={() => setDrill(null)} title={drill?.title} subtitle={drill?.subtitle} sections={drill?.sections || []} />
     </div>
