@@ -178,7 +178,7 @@ export default function Weekly() {
                     </div>
                   </div>
                 )}
-                <div className={`mt-1.5 text-[11px] ${isToday ? 'font-bold text-ink-900' : 'text-ink-500'}`}>{isToday ? '오늘 ' : d.dow + ' '}{d.date.slice(8)}</div>
+                <div className={`mt-1.5 text-xs font-semibold ${isToday ? 'font-bold text-ink-900' : 'text-ink-700'}`}>{isToday ? '오늘 ' : d.dow + ' '}{d.date.slice(8)}</div>
               </div>
             )
           })}
@@ -236,9 +236,9 @@ export default function Weekly() {
               <tr key={r.rep} className="border-t border-line/70">
                 <td className="px-5 py-2.5 font-semibold text-ink-900">{r.rep}</td>
                 <td className="px-3 py-2.5 text-ink-500">{r.group}</td>
-                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.o ? { color: C_OPP } : undefined}
+                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: r.o ? 1 : 0.45 }}
                   onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
-                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.a ? { color: C_ACT } : undefined}
+                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: r.a ? 1 : 0.45 }}
                   onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
                 <td className="px-5 py-2.5 text-right tnum text-sm font-semibold">
                   <span className={r.yA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
