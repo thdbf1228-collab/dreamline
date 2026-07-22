@@ -57,21 +57,24 @@ export default function Weekly() {
   // 일자별 (7일)
   const days = useMemo(() => {
     const arr = []
-    for (let i = 6; i >= 0; i--) {
-      const d = ymd(addDays(new Date(range.end), -i))
-      const dt = new Date(d)
-      if (dt.getDay() === 0 || dt.getDay() === 6) continue // 주말 제외
-      if (holidays.includes(d)) continue // 등록된 휴무일 제외
-      arr.push({
-        date: d,
-        dow: DOW[dt.getDay()],
-        o: cur.o.filter((r) => dOf(r.start_date) === d).length,
-        a: cur.a.filter((r) => dOf(r.activity_date) === d).length,
-      })
+    let cursor = new Date(range.end)
+    while (arr.length < 5) {
+      const day = cursor.getDay()
+      if (day !== 0 && day !== 6) { // 주말은 건너뜀
+        const d = ymd(cursor)
+        arr.unshift({
+          date: d,
+          dow: DOW[day],
+          holiday: holidays.includes(d),
+          o: cur.o.filter((r) => dOf(r.start_date) === d).length,
+          a: cur.a.filter((r) => dOf(r.activity_date) === d).length,
+        })
+      }
+      cursor = addDays(cursor, -1)
     }
     return arr
   }, [cur, range, holidays])
-  const maxDay = Math.max(1, ...days.map((d) => Math.max(d.o, d.a)))
+  const maxDay = Math.max(1, ...days.filter((d) => !d.holiday).map((d) => Math.max(d.o, d.a)))
 
   const groups = useMemo(() => {
     const s = new Set()
@@ -157,18 +160,24 @@ export default function Weekly() {
             const isToday = d.date === todayStr
             return (
               <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
-                <div className="mb-1 flex gap-1 text-[11px] tnum">
-                  <span style={{ color: d.o ? C_OPP : '#cbd2dc' }}>{d.o}</span>
-                  <span style={{ color: d.a ? C_ACT : '#cbd2dc' }}>{d.a}</span>
-                </div>
-                <div className="flex w-3/5 items-end gap-[3px]" style={{ height: '78%' }}>
-                  <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업기회 ${d.o}건`}
-                    style={{ height: `${(d.o / maxDay) * 100}%`, minHeight: d.o ? 4 : 0, background: C_OPP }}
-                    onClick={() => openOpp(cur.o.filter((r) => dOf(r.start_date) === d.date), `${label(d.date)} 신규 영업기회`, label(d.date))} />
-                  <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업활동 ${d.a}건`}
-                    style={{ height: `${(d.a / maxDay) * 100}%`, minHeight: d.a ? 4 : 0, background: C_ACT }}
-                    onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))} />
-                </div>
+                {d.holiday ? (
+                  <div className="flex w-full items-end justify-center" style={{ height: '100%' }}>
+                    <span className="mb-1 rounded bg-canvas px-1.5 py-0.5 text-[11px] text-ink-400">공휴일</span>
+                  </div>
+                ) : (
+                  <div className="flex w-3/5 items-end gap-[3px]" style={{ height: '100%' }}>
+                    <div className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end" title={`영업기회 ${d.o}건`}
+                      onClick={() => openOpp(cur.o.filter((r) => dOf(r.start_date) === d.date), `${label(d.date)} 신규 영업기회`, label(d.date))}>
+                      <span className="mb-0.5 text-[10px] tnum" style={{ color: d.o ? C_OPP : '#cbd2dc' }}>{d.o}</span>
+                      <div className="w-full rounded-t hover:opacity-80" style={{ height: `${(d.o / maxDay) * 90}%`, minHeight: d.o ? 4 : 0, background: C_OPP }} />
+                    </div>
+                    <div className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end" title={`영업활동 ${d.a}건`}
+                      onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))}>
+                      <span className="mb-0.5 text-[10px] tnum" style={{ color: d.a ? C_ACT : '#cbd2dc' }}>{d.a}</span>
+                      <div className="w-full rounded-t hover:opacity-80" style={{ height: `${(d.a / maxDay) * 90}%`, minHeight: d.a ? 4 : 0, background: C_ACT }} />
+                    </div>
+                  </div>
+                )}
                 <div className={`mt-1.5 text-[11px] ${isToday ? 'font-bold text-ink-900' : 'text-ink-500'}`}>{isToday ? '오늘 ' : d.dow + ' '}{d.date.slice(8)}</div>
               </div>
             )
@@ -231,11 +240,11 @@ export default function Weekly() {
                   onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.a ? { color: C_ACT } : undefined}
                   onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
-                <td className="px-5 py-2.5 text-right tnum text-xs font-semibold">
-                  <span className={r.yA ? 'cursor-pointer text-ink-600 hover:underline' : 'text-ink-300'}
+                <td className="px-5 py-2.5 text-right tnum text-sm font-semibold">
+                  <span className={r.yA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === yestStr), `${r.rep} 어제 영업활동`, label(yestStr))}>{r.yA}</span>
                   <span className="text-ink-300"> / </span>
-                  <span className={r.tA ? 'cursor-pointer text-ink-800 hover:underline' : 'text-ink-300'}
+                  <span className={r.tA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === todayStr), `${r.rep} 오늘 영업활동`, label(todayStr))}>{r.tA}</span>
                 </td>
               </tr>
