@@ -4,6 +4,7 @@ import { useNotice } from '../data/useNotice'
 
 const NAV = [
   { to: '/', label: '전체', end: true },
+  { to: '/weekly', label: '주간현황' },
   { to: '/accounts', label: '파이프라인' },
   { to: '/contracts', label: '계약' },
   { to: '/activity', label: '활동' },
