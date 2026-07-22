@@ -5,6 +5,49 @@ import { Card } from '../components/ui'
 
 const PHOTO_BUCKET = 'rep-photos'
 
+function HolidayPanel() {
+  const [days, setDays] = useState([])
+  const [input, setInput] = useState('')
+  const [msg, setMsg] = useState('')
+  useEffect(() => {
+    supabase.from('app_settings').select('value').eq('key', 'holidays').maybeSingle()
+      .then(({ data }) => { try { setDays(JSON.parse(data?.value || '[]')) } catch { setDays([]) } })
+  }, [])
+  const save = async (next) => {
+    const sorted = [...new Set(next)].sort()
+    setDays(sorted)
+    const { error } = await supabase.from('app_settings').upsert({ key: 'holidays', value: JSON.stringify(sorted), updated_at: new Date().toISOString() })
+    setMsg(error ? '저장 실패: ' + error.message : '저장되었습니다.')
+    setTimeout(() => setMsg(''), 2000)
+  }
+  const add = () => { if (!input) return; save([...days, input]); setInput('') }
+  const remove = (d) => save(days.filter((x) => x !== d))
+  return (
+    <Card className="p-5">
+      <h2 className="text-base font-bold text-ink-900 mb-1">주간현황 휴무일</h2>
+      <p className="text-xs text-ink-400 mb-3">여기 등록한 날짜는 주간현황 일자별 그래프에서 제외됩니다 (주말은 자동 제외). 공휴일·창립기념일 등 쉬는 날을 등록하세요.</p>
+      <div className="flex items-center gap-2 mb-3">
+        <input type="date" value={input} onChange={(e) => setInput(e.target.value)}
+          className="rounded-lg border border-line px-3 py-1.5 text-sm focus:border-brand" />
+        <button onClick={add} className="rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">추가</button>
+        {msg && <span className="text-xs text-ink-500">{msg}</span>}
+      </div>
+      {days.length === 0 ? (
+        <p className="text-xs text-ink-400">등록된 휴무일이 없습니다.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {days.map((d) => (
+            <span key={d} className="inline-flex items-center gap-1.5 rounded-lg bg-canvas px-2.5 py-1 text-sm text-ink-700">
+              {d.replaceAll('-', '.')}
+              <button onClick={() => remove(d)} className="text-ink-400 hover:text-lost">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
 function NoticePanel() {
   const [text, setText] = useState('')
   const [msg, setMsg] = useState('')
@@ -42,6 +85,7 @@ export default function Admin() {
       </header>
       <UploadPanel />
       <NoticePanel />
+      <HolidayPanel />
       <GroupPanel groups={groups} reload={loadGroups} />
       <RepPanel groups={groups} />
     </div>

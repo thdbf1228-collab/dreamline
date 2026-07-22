@@ -3,6 +3,7 @@ import { useOpportunities } from '../data/useOpportunities'
 import { useActivities } from '../data/useActivities'
 import { useContracts } from '../data/useContracts'
 import { useReps, isHiddenGroup } from '../data/useReps'
+import { useHolidays } from '../data/useHolidays'
 import { Card } from '../components/ui'
 import { num } from '../lib/format'
 import { Loading, ErrorBox } from './Overview'
@@ -21,6 +22,7 @@ export default function Weekly() {
   const { rows: acts, loading: l2 } = useActivities()
   const { rows: cons, loading: l3 } = useContracts()
   const { reps: repList } = useReps()
+  const holidays = useHolidays()
   const [weekOffset, setWeekOffset] = useState(0)
   const [drill, setDrill] = useState(null)
 
@@ -59,6 +61,7 @@ export default function Weekly() {
       const d = ymd(addDays(new Date(range.end), -i))
       const dt = new Date(d)
       if (dt.getDay() === 0 || dt.getDay() === 6) continue // 주말 제외
+      if (holidays.includes(d)) continue // 등록된 휴무일 제외
       arr.push({
         date: d,
         dow: DOW[dt.getDay()],
@@ -67,7 +70,7 @@ export default function Weekly() {
       })
     }
     return arr
-  }, [cur, range])
+  }, [cur, range, holidays])
   const maxDay = Math.max(1, ...days.map((d) => Math.max(d.o, d.a)))
 
   const groups = useMemo(() => {
@@ -228,11 +231,11 @@ export default function Weekly() {
                   onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={r.a ? { color: C_ACT } : undefined}
                   onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
-                <td className="px-5 py-2.5 text-right tnum text-xs">
-                  <span className={r.yA ? 'cursor-pointer text-ink-600 hover:underline' : 'text-ink-300'}
+                <td className="px-5 py-2.5 text-right tnum text-sm font-bold">
+                  <span className={r.yA ? 'cursor-pointer text-ink-900 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === yestStr), `${r.rep} 어제 영업활동`, label(yestStr))}>{r.yA}</span>
                   <span className="text-ink-300"> / </span>
-                  <span className={r.tA ? 'cursor-pointer text-ink-800 hover:underline' : 'text-ink-300'}
+                  <span className={r.tA ? 'cursor-pointer text-ink-900 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === todayStr), `${r.rep} 오늘 영업활동`, label(todayStr))}>{r.tA}</span>
                 </td>
               </tr>
