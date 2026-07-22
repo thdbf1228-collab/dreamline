@@ -221,7 +221,7 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 날짜=영업활동 하루</span></div>
+        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
         <table className="w-full text-sm">
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
@@ -229,7 +229,7 @@ export default function Weekly() {
               <th className="px-3 py-2 text-left font-medium">그룹</th>
               <th className="px-3 py-2 text-right font-medium">영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
               <th className="px-3 py-2 text-right font-medium">영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-5 py-2 text-right font-medium">{Number(day2Str.slice(8))}일/{Number(yestStr.slice(8))}일<span className="font-normal text-ink-400"> (활동)</span></th>
+              <th className="px-5 py-2 text-right font-medium">이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
             </tr>
           </thead>
           <tbody>
