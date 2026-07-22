@@ -161,27 +161,22 @@ export default function Weekly() {
             return (
               <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
                 {d.holiday ? (
-                  <>
-                    <div className="mb-1 text-[11px]">&nbsp;</div>
-                    <div className="flex w-full items-end justify-center" style={{ height: '78%' }}>
-                      <span className="mb-1 rounded bg-canvas px-1.5 py-0.5 text-[11px] text-ink-400">공휴일</span>
-                    </div>
-                  </>
+                  <div className="flex w-full items-end justify-center" style={{ height: '100%' }}>
+                    <span className="mb-1 rounded bg-canvas px-1.5 py-0.5 text-[11px] text-ink-400">공휴일</span>
+                  </div>
                 ) : (
-                  <>
-                    <div className="mb-1 flex gap-1 text-[11px] tnum">
-                      <span style={{ color: d.o ? C_OPP : '#cbd2dc' }}>{d.o}</span>
-                      <span style={{ color: d.a ? C_ACT : '#cbd2dc' }}>{d.a}</span>
+                  <div className="flex w-3/5 items-end gap-[3px]" style={{ height: '100%' }}>
+                    <div className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end" title={`영업기회 ${d.o}건`}
+                      onClick={() => openOpp(cur.o.filter((r) => dOf(r.start_date) === d.date), `${label(d.date)} 신규 영업기회`, label(d.date))}>
+                      <span className="mb-0.5 text-[10px] tnum" style={{ color: d.o ? C_OPP : '#cbd2dc' }}>{d.o}</span>
+                      <div className="w-full rounded-t hover:opacity-80" style={{ height: `${(d.o / maxDay) * 90}%`, minHeight: d.o ? 4 : 0, background: C_OPP }} />
                     </div>
-                    <div className="flex w-3/5 items-end gap-[3px]" style={{ height: '78%' }}>
-                      <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업기회 ${d.o}건`}
-                        style={{ height: `${(d.o / maxDay) * 100}%`, minHeight: d.o ? 4 : 0, background: C_OPP }}
-                        onClick={() => openOpp(cur.o.filter((r) => dOf(r.start_date) === d.date), `${label(d.date)} 신규 영업기회`, label(d.date))} />
-                      <div className="flex-1 cursor-pointer rounded-t hover:opacity-80" title={`영업활동 ${d.a}건`}
-                        style={{ height: `${(d.a / maxDay) * 100}%`, minHeight: d.a ? 4 : 0, background: C_ACT }}
-                        onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))} />
+                    <div className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end" title={`영업활동 ${d.a}건`}
+                      onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))}>
+                      <span className="mb-0.5 text-[10px] tnum" style={{ color: d.a ? C_ACT : '#cbd2dc' }}>{d.a}</span>
+                      <div className="w-full rounded-t hover:opacity-80" style={{ height: `${(d.a / maxDay) * 90}%`, minHeight: d.a ? 4 : 0, background: C_ACT }} />
                     </div>
-                  </>
+                  </div>
                 )}
                 <div className={`mt-1.5 text-[11px] ${isToday ? 'font-bold text-ink-900' : 'text-ink-500'}`}>{isToday ? '오늘 ' : d.dow + ' '}{d.date.slice(8)}</div>
               </div>
