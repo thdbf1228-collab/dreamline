@@ -168,12 +168,12 @@ export default function Weekly() {
                   <div className="flex w-3/5 items-end gap-[3px]" style={{ height: '100%' }}>
                     <div className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end" title={`영업기회 ${d.o}건`}
                       onClick={() => openOpp(cur.o.filter((r) => dOf(r.start_date) === d.date), `${label(d.date)} 신규 영업기회`, label(d.date))}>
-                      <span className="mb-0.5 text-[10px] tnum" style={{ color: d.o ? C_OPP : '#cbd2dc' }}>{d.o}</span>
+                      <span className="mb-0.5 text-xs font-bold tnum" style={{ color: d.o ? C_OPP : '#aab3c0' }}>{d.o}</span>
                       <div className="w-full rounded-t hover:opacity-80" style={{ height: `${(d.o / maxDay) * 90}%`, minHeight: d.o ? 4 : 0, background: C_OPP }} />
                     </div>
                     <div className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end" title={`영업활동 ${d.a}건`}
                       onClick={() => openAct(cur.a.filter((r) => dOf(r.activity_date) === d.date), `${label(d.date)} 영업활동`, label(d.date))}>
-                      <span className="mb-0.5 text-[10px] tnum" style={{ color: d.a ? C_ACT : '#cbd2dc' }}>{d.a}</span>
+                      <span className="mb-0.5 text-xs font-bold tnum" style={{ color: d.a ? C_ACT : '#aab3c0' }}>{d.a}</span>
                       <div className="w-full rounded-t hover:opacity-80" style={{ height: `${(d.a / maxDay) * 90}%`, minHeight: d.a ? 4 : 0, background: C_ACT }} />
                     </div>
                   </div>
