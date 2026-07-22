@@ -44,7 +44,7 @@ export default function Layout({ children }) {
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>
               {n.label}
-              {n.badge && <span className="ml-1.5 rounded bg-lost/70 px-1 py-px text-[8px] font-bold text-white align-middle badge-pulse">{n.badge}</span>}
+              {n.badge && <span className="ml-1.5 rounded bg-lost/55 px-1 py-px text-[8px] font-bold text-white align-middle badge-pulse">{n.badge}</span>}
             </NavLink>
           ))}
           {isAdmin && (<>
@@ -67,7 +67,7 @@ export default function Layout({ children }) {
           {items.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className={pillClass}>
               {n.label}
-              {n.badge && <span className="ml-1 rounded bg-lost/70 px-1 text-[9px] font-bold text-white badge-pulse">{n.badge}</span>}
+              {n.badge && <span className="ml-1 rounded bg-lost/55 px-1 text-[9px] font-bold text-white badge-pulse">{n.badge}</span>}
             </NavLink>
           ))}
         </nav>

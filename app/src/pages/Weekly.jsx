@@ -26,17 +26,18 @@ export default function Weekly() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [drill, setDrill] = useState(null)
 
+  // 기준일 = 어제 (오늘 데이터는 아직 업로드 전이라 제외). weekOffset 주 단위 이동.
+  const baseEnd = addDays(new Date(), weekOffset * 7 - 1)
   const range = useMemo(() => {
-    const end = addDays(new Date(), weekOffset * 7)
+    const end = new Date(baseEnd)
     return { start: ymd(addDays(end, -6)), end: ymd(end) }
   }, [weekOffset])
   const prev = useMemo(() => {
-    const end = addDays(new Date(), (weekOffset - 1) * 7)
+    const end = addDays(new Date(baseEnd), -7)
     return { start: ymd(addDays(end, -6)), end: ymd(end) }
   }, [weekOffset])
-  const todayStr = ymd(addDays(new Date(), weekOffset * 7))       // 막대 '오늘' 강조용
-  const yestStr = ymd(addDays(new Date(), weekOffset * 7 - 1))   // 어제
-  const day2Str = ymd(addDays(new Date(), weekOffset * 7 - 2))   // 그제
+  const yestStr = ymd(baseEnd)                    // 기준일(어제)
+  const day2Str = ymd(addDays(new Date(baseEnd), -1))  // 그 전날(이틀전)
 
   const dOf = (v) => (v || '').slice(0, 10)
   const inRange = (v, r) => { const d = dOf(v); return d && d >= r.start && d <= r.end }
@@ -117,7 +118,7 @@ export default function Weekly() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink-900">주간현황</h1>
-          <p className="text-sm text-ink-500">{range.start.replaceAll('-', '.')} ~ {range.end.replaceAll('-', '.')} · 최근 7일 (오늘 기준)</p>
+          <p className="text-sm text-ink-500">{range.start.replaceAll('-', '.')} ~ {range.end.replaceAll('-', '.')} · 어제까지 최근 7일</p>
         </div>
         <select value={weekOffset} onChange={(e) => setWeekOffset(Number(e.target.value))}
           className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
@@ -158,7 +159,6 @@ export default function Weekly() {
         </div>
         <div className="flex items-end gap-2.5" style={{ height: 140 }}>
           {days.map((d) => {
-            const isToday = d.date === todayStr
             return (
               <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
                 {d.holiday ? (
@@ -179,7 +179,7 @@ export default function Weekly() {
                     </div>
                   </div>
                 )}
-                <div className={`mt-1.5 text-xs font-semibold ${isToday ? 'font-bold text-ink-900' : 'text-ink-700'}`}>{isToday ? '오늘 ' : d.dow + ' '}{d.date.slice(8)}</div>
+                <div className="mt-1.5 text-xs font-semibold text-ink-700">{Number(d.date.slice(8))}일 ({d.dow})</div>
               </div>
             )
           })}
@@ -221,7 +221,7 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
+        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 날짜=영업활동 하루</span></div>
         <table className="w-full text-sm">
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
@@ -229,7 +229,7 @@ export default function Weekly() {
               <th className="px-3 py-2 text-left font-medium">그룹</th>
               <th className="px-3 py-2 text-right font-medium">영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
               <th className="px-3 py-2 text-right font-medium">영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-5 py-2 text-right font-medium">이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
+              <th className="px-5 py-2 text-right font-medium">{Number(day2Str.slice(8))}일/{Number(yestStr.slice(8))}일<span className="font-normal text-ink-400"> (활동)</span></th>
             </tr>
           </thead>
           <tbody>
