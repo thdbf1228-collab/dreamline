@@ -189,15 +189,15 @@ export default function Weekly() {
       {/* 그룹별 */}
       <Card className="p-0 overflow-hidden">
         <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">그룹별</div>
-        <table className="w-full text-sm">
-          <colgroup><col style={{ width: '10em' }} /><col style={{ width: '9em' }} /><col style={{ width: '9em' }} /><col style={{ width: '9em' }} /><col /></colgroup>
+        <table className="w-full table-fixed text-sm">
+          <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
               <th className="px-5 py-2 text-left font-medium">그룹</th>
+              <th></th>
               <th className="px-3 py-2 text-right font-medium">영업기회</th>
               <th className="px-3 py-2 text-right font-medium">영업활동</th>
-              <th className="px-3 py-2 text-right font-medium">계약</th>
-              <th></th>
+              <th className="px-5 py-2 text-right font-medium">계약</th>
             </tr>
           </thead>
           <tbody>
@@ -208,13 +208,13 @@ export default function Weekly() {
               return (
                 <tr key={g} className="border-t border-line/70">
                   <td className="px-5 py-2.5 font-semibold text-ink-900">{g}</td>
+                  <td></td>
                   <td className={`px-3 py-2.5 text-right tnum font-semibold ${go.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={go.length ? { color: C_OPP } : undefined}
                     onClick={() => openOpp(go, `${g} 신규 영업기회`)}>{go.length}건</td>
                   <td className={`px-3 py-2.5 text-right tnum font-semibold ${ga.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={ga.length ? { color: C_ACT } : undefined}
                     onClick={() => openAct(ga, `${g} 영업활동`)}>{ga.length}건</td>
-                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
+                  <td className={`px-5 py-2.5 text-right tnum font-semibold ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
                     onClick={() => openCon(gc, `${g} 계약`)}>{gc.length}건</td>
-                  <td></td>
                 </tr>
               )
             })}
@@ -225,35 +225,33 @@ export default function Weekly() {
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
         <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
-        <table className="w-full text-sm">
-          <colgroup><col style={{ width: '6em' }} /><col style={{ width: '4em' }} /><col style={{ width: '9em' }} /><col style={{ width: '9em' }} /><col style={{ width: '9em' }} /><col /></colgroup>
+        <table className="w-full table-fixed text-sm">
+          <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
               <th className="px-5 py-2 text-left font-medium">담당자</th>
               <th className="px-3 py-2 text-left font-medium">그룹</th>
               <th className="px-3 py-2 text-right font-medium">영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
               <th className="px-3 py-2 text-right font-medium">영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-3 py-2 text-right font-medium">이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
-              <th></th>
+              <th className="px-5 py-2 text-right font-medium">이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
             </tr>
           </thead>
           <tbody>
             {repRows.map((r) => (
               <tr key={r.rep} className="border-t border-line/70">
                 <td className="px-5 py-2.5 font-semibold text-ink-900">{r.rep}</td>
-                <td className="px-3 py-2.5 text-ink-500">{r.group}</td>
+                <td className="px-3 py-2.5 whitespace-nowrap text-ink-500">{r.group}</td>
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: r.o ? 1 : 0.45 }}
                   onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: r.a ? 1 : 0.45 }}
                   onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
-                <td className="px-3 py-2.5 text-right tnum text-sm font-semibold">
+                <td className="px-5 py-2.5 text-right tnum text-sm font-semibold">
                   <span className={r.d2A ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === day2Str), `${r.rep} 그제 영업활동`, label(day2Str))}>{r.d2A}</span>
                   <span className="text-ink-300"> / </span>
                   <span className={r.yA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === yestStr), `${r.rep} 어제 영업활동`, label(yestStr))}>{r.yA}</span>
                 </td>
-                <td></td>
               </tr>
             ))}
           </tbody>
