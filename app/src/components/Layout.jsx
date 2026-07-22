@@ -44,7 +44,7 @@ export default function Layout({ children }) {
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>
               {n.label}
-              {n.badge && <span className="ml-2 rounded bg-lost px-1.5 py-0.5 text-[10px] font-bold text-white align-middle badge-pulse">{n.badge}</span>}
+              {n.badge && <span className="ml-1.5 rounded bg-lost px-1 py-px text-[8px] font-bold text-white align-middle badge-pulse">{n.badge}</span>}
             </NavLink>
           ))}
           {isAdmin && (<>

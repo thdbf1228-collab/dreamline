@@ -34,8 +34,9 @@ export default function Weekly() {
     const end = addDays(new Date(), (weekOffset - 1) * 7)
     return { start: ymd(addDays(end, -6)), end: ymd(end) }
   }, [weekOffset])
-  const todayStr = ymd(addDays(new Date(), weekOffset * 7))
-  const yestStr = ymd(addDays(new Date(), weekOffset * 7 - 1))
+  const todayStr = ymd(addDays(new Date(), weekOffset * 7))       // 막대 '오늘' 강조용
+  const yestStr = ymd(addDays(new Date(), weekOffset * 7 - 1))   // 어제
+  const day2Str = ymd(addDays(new Date(), weekOffset * 7 - 2))   // 그제
 
   const dOf = (v) => (v || '').slice(0, 10)
   const inRange = (v, r) => { const d = dOf(v); return d && d >= r.start && d <= r.end }
@@ -90,16 +91,16 @@ export default function Weekly() {
 
   const repRows = useMemo(() => {
     const m = new Map()
-    for (const r of roster) if (!m.has(r.rep)) m.set(r.rep, { rep: r.rep, group: r.group, o: 0, a: 0, yA: 0, tA: 0 })
+    for (const r of roster) if (!m.has(r.rep)) m.set(r.rep, { rep: r.rep, group: r.group, o: 0, a: 0, yA: 0, d2A: 0 })
     for (const r of cur.o) { const x = m.get(r.rep_name); if (x) x.o += 1 }
     for (const r of cur.a) {
       const x = m.get(r.rep_name); if (!x) continue
       x.a += 1
       if (dOf(r.activity_date) === yestStr) x.yA += 1
-      if (dOf(r.activity_date) === todayStr) x.tA += 1
+      if (dOf(r.activity_date) === day2Str) x.d2A += 1
     }
     return [...m.values()].sort((x, y) => (y.a - x.a) || (y.o - x.o) || x.rep.localeCompare(y.rep))
-  }, [roster, cur, yestStr, todayStr])
+  }, [roster, cur, yestStr, day2Str])
 
   const diff = (n, p) => { const d = n - p; return d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}` }
 
@@ -220,7 +221,7 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 어제·오늘=영업활동 하루</span></div>
+        <div className="border-b border-line px-5 py-3 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 날짜별=영업활동 하루</span></div>
         <table className="w-full text-sm">
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
@@ -228,7 +229,7 @@ export default function Weekly() {
               <th className="px-3 py-2 text-left font-medium">그룹</th>
               <th className="px-3 py-2 text-right font-medium">영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
               <th className="px-3 py-2 text-right font-medium">영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-5 py-2 text-right font-medium">어제/오늘<span className="font-normal text-ink-400"> (활동)</span></th>
+              <th className="px-5 py-2 text-right font-medium">{label(day2Str)}/{label(yestStr)}<span className="font-normal text-ink-400"> (활동)</span></th>
             </tr>
           </thead>
           <tbody>
@@ -241,11 +242,11 @@ export default function Weekly() {
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: r.a ? 1 : 0.45 }}
                   onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
                 <td className="px-5 py-2.5 text-right tnum text-sm font-semibold">
+                  <span className={r.d2A ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
+                    onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === day2Str), `${r.rep} 그제 영업활동`, label(day2Str))}>{r.d2A}</span>
+                  <span className="text-ink-300"> / </span>
                   <span className={r.yA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === yestStr), `${r.rep} 어제 영업활동`, label(yestStr))}>{r.yA}</span>
-                  <span className="text-ink-300"> / </span>
-                  <span className={r.tA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
-                    onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === todayStr), `${r.rep} 오늘 영업활동`, label(todayStr))}>{r.tA}</span>
                 </td>
               </tr>
             ))}
