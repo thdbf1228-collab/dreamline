@@ -150,7 +150,7 @@ export default function Weekly() {
 
       {/* 요약 카드 */}
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <Card className="py-4 px-12 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openOpp(cur.o, '이번 주 신규 영업기회')}>
+        <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openOpp(cur.o, '이번 주 신규 영업기회')}>
           <div className="text-sm text-ink-500">신규 영업기회 <span className="text-ink-400">(시작일)</span></div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-bold tnum" style={{ color: C_OPP }}>{num(cur.o.length)}건</span>
@@ -158,7 +158,7 @@ export default function Weekly() {
           </div>
           <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.o}건</div>
         </Card>
-        <Card className="py-4 px-12 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openAct(cur.a, '이번 주 영업활동')}>
+        <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openAct(cur.a, '이번 주 영업활동')}>
           <div className="text-sm text-ink-500">영업활동 <span className="text-ink-400">(활동일시)</span></div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-bold tnum" style={{ color: C_ACT }}>{num(cur.a.length)}건</span>
@@ -166,7 +166,7 @@ export default function Weekly() {
           </div>
           <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.a}건</div>
         </Card>
-        <Card className="py-4 px-12 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openCon(cur.c, '이번 주 계약')}>
+        <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openCon(cur.c, '이번 주 계약')}>
           <div className="text-sm text-ink-500">계약 <span className="text-ink-400">(계약일)</span></div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-bold tnum text-ink-900">{num(cur.c.length)}건</span>
@@ -178,14 +178,14 @@ export default function Weekly() {
 
       {/* 일자별 막대 */}
       <Card className="p-4">
-        <div className="mb-3 flex items-baseline justify-between px-8">
+        <div className="mb-3 flex items-baseline justify-between">
           <span className="text-sm font-bold text-ink-900">날짜별 현황 <span className="text-xs font-normal text-ink-400">막대 클릭 시 상세</span></span>
           <span className="text-xs text-ink-400">
             <span className="mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_OPP }} />영업기회
             <span className="ml-2.5 mr-1 inline-block h-2 w-2 rounded-sm align-middle" style={{ background: C_ACT }} />영업활동
           </span>
         </div>
-        <div className="flex items-end gap-2.5 px-8" style={{ height: 140 }}>
+        <div className="flex items-end gap-2.5" style={{ height: 140 }}>
           {days.map((d) => {
             return (
               <div key={d.date} className="flex h-full flex-1 flex-col items-center justify-end">
@@ -216,8 +216,8 @@ export default function Weekly() {
 
       {/* 그룹별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별</div>
-        <div className="px-12">
+        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별</div>
+        <div className="px-4 pb-2">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
@@ -264,8 +264,8 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 주간 누계 · ▲▼ = 담당자 평균 영업활동 대비</span></div>
-        <div className="px-12">
+        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 주간 누계 · ▲▼ = 담당자 평균 영업활동 대비</span></div>
+        <div className="px-4 pb-2">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
