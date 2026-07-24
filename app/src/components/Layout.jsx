@@ -51,6 +51,14 @@ export default function Layout({ children }) {
             <div className="pt-3 mt-2 border-t border-line" />
             <NavLink to="/admin" className={sideClass}>관리자</NavLink>
           </>)}
+          <div className="pt-3 mt-2 border-t border-line" />
+          <a href="https://dreamline-sales.vercel.app/" target="_blank" rel="noopener noreferrer"
+            className="block rounded-lg px-3 py-2 text-sm font-medium text-ink-500 transition-colors hover:bg-canvas hover:text-ink-900">
+            🔗 키맨
+          </a>
+          <div className="block cursor-not-allowed rounded-lg px-3 py-2 text-sm font-medium text-ink-300" title="준비중입니다">
+            🔒 매출실적 <span className="text-[10px]">(준비중)</span>
+          </div>
         </nav>
       </aside>
 
@@ -70,6 +78,13 @@ export default function Layout({ children }) {
               {n.badge && <span className="ml-1 rounded bg-lost/55 px-1 text-[9px] font-bold text-white badge-pulse">{n.badge}</span>}
             </NavLink>
           ))}
+          <a href="https://dreamline-sales.vercel.app/" target="_blank" rel="noopener noreferrer"
+            className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-600">
+            🔗 키맨
+          </a>
+          <span className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-canvas px-3 py-1.5 text-sm font-medium text-ink-300">
+            🔒 매출실적
+          </span>
         </nav>
       </header>
 
