@@ -288,14 +288,8 @@ export default function Weekly() {
             <tr className="border-t-2 border-line bg-canvas/60">
               <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
               <td></td>
-              <td className="px-3 py-2.5 text-right">
-                <span className="tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</span>
-                <WoW now={cur.o.length} prev={prevCnt.o} />
-              </td>
-              <td className="px-3 py-2.5 text-right">
-                <span className="tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</span>
-                <WoW now={cur.a.length} prev={prevCnt.a} />
-              </td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</td>
               <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{cur.c.length}건</td>
               <td></td>
             </tr>
@@ -353,14 +347,8 @@ export default function Weekly() {
             <tr className="border-t-2 border-line bg-canvas/60">
               <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
               <td className="px-2 py-2.5 text-xs text-ink-400">평균 {avgA.toFixed(1)}건</td>
-              <td className="px-3 py-2.5 text-right">
-                <span className="tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</span>
-                <WoW now={totals.o} prev={prevCnt.o} />
-              </td>
-              <td className="px-3 py-2.5 text-right">
-                <span className="tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</span>
-                <WoW now={totals.a} prev={prevCnt.a} />
-              </td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</td>
               <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{totals.c}건</td>
               <td className="px-3 py-2.5 text-right tnum text-sm font-bold text-ink-700">{totals.d2A} / {totals.yA}</td>
             </tr>
