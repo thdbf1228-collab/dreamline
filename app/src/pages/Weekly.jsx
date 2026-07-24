@@ -17,6 +17,18 @@ function ymd(d) { const p = (n) => String(n).padStart(2, '0'); return `${d.getFu
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
 function label(s) { return s.replaceAll('-', '.').slice(5) }
 
+// 증감 표시 (▲ 증가=파랑 / ▼ 감소=빨강)
+function Delta({ now, prev }) {
+  const d = now - prev
+  if (d === 0) return <span className="text-xs font-semibold text-ink-300">±0</span>
+  const up = d > 0
+  return (
+    <span className={`text-xs font-bold ${up ? 'text-brand' : 'text-lost'}`}>
+      {up ? '▲' : '▼'} {Math.abs(d)}
+    </span>
+  )
+}
+
 export default function Weekly() {
   const { rows: opps, error: e1, loading: l1 } = useOpportunities()
   const { rows: acts, loading: l2 } = useActivities()
@@ -92,8 +104,9 @@ export default function Weekly() {
 
   const repRows = useMemo(() => {
     const m = new Map()
-    for (const r of roster) if (!m.has(r.rep)) m.set(r.rep, { rep: r.rep, group: r.group, o: 0, a: 0, yA: 0, d2A: 0 })
+    for (const r of roster) if (!m.has(r.rep)) m.set(r.rep, { rep: r.rep, group: r.group, o: 0, a: 0, c: 0, yA: 0, d2A: 0 })
     for (const r of cur.o) { const x = m.get(r.rep_name); if (x) x.o += 1 }
+    for (const r of cur.c) { const x = m.get(r.rep_name); if (x) x.c += 1 }
     for (const r of cur.a) {
       const x = m.get(r.rep_name); if (!x) continue
       x.a += 1
@@ -102,6 +115,12 @@ export default function Weekly() {
     }
     return [...m.values()].sort((x, y) => (y.a - x.a) || (y.o - x.o) || x.rep.localeCompare(y.rep))
   }, [roster, cur, yestStr, day2Str])
+
+  // 담당자 평균(영업활동) + 합계
+  const avgA = repRows.length ? repRows.reduce((t, x) => t + x.a, 0) / repRows.length : 0
+  const totals = repRows.reduce((t, x) => ({
+    o: t.o + x.o, a: t.a + x.a, c: t.c + x.c, d2A: t.d2A + x.d2A, yA: t.yA + x.yA,
+  }), { o: 0, a: 0, c: 0, d2A: 0, yA: 0 })
 
   const diff = (n, p) => { const d = n - p; return d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}` }
 
@@ -133,18 +152,27 @@ export default function Weekly() {
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openOpp(cur.o, '이번 주 신규 영업기회')}>
           <div className="text-sm text-ink-500">신규 영업기회 <span className="text-ink-400">(시작일)</span></div>
-          <div className="mt-1 text-2xl font-bold tnum" style={{ color: C_OPP }}>{num(cur.o.length)}건</div>
-          <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.o}건 · {diff(cur.o.length, prevCnt.o)}</div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tnum" style={{ color: C_OPP }}>{num(cur.o.length)}건</span>
+            <Delta now={cur.o.length} prev={prevCnt.o} />
+          </div>
+          <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.o}건</div>
         </Card>
         <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openAct(cur.a, '이번 주 영업활동')}>
           <div className="text-sm text-ink-500">영업활동 <span className="text-ink-400">(활동일시)</span></div>
-          <div className="mt-1 text-2xl font-bold tnum" style={{ color: C_ACT }}>{num(cur.a.length)}건</div>
-          <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.a}건 · {diff(cur.a.length, prevCnt.a)}</div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tnum" style={{ color: C_ACT }}>{num(cur.a.length)}건</span>
+            <Delta now={cur.a.length} prev={prevCnt.a} />
+          </div>
+          <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.a}건</div>
         </Card>
         <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openCon(cur.c, '이번 주 계약')}>
           <div className="text-sm text-ink-500">계약 <span className="text-ink-400">(계약일)</span></div>
-          <div className="mt-1 text-2xl font-bold tnum text-ink-900">{num(cur.c.length)}건</div>
-          <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.c}건 · {diff(cur.c.length, prevCnt.c)}</div>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tnum text-ink-900">{num(cur.c.length)}건</span>
+            <Delta now={cur.c.length} prev={prevCnt.c} />
+          </div>
+          <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.c}건</div>
         </Card>
       </div>
 
@@ -191,14 +219,15 @@ export default function Weekly() {
         <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별</div>
         <div className="px-12">
         <table className="w-full table-fixed text-sm">
-          <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
+          <colgroup><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
               <th className="px-2 py-2 text-left font-medium">그룹</th>
               <th></th>
               <th className="px-3 py-2 text-right font-medium">영업기회</th>
               <th className="px-3 py-2 text-right font-medium">영업활동</th>
-              <th className="px-2 py-2 text-right font-medium">계약</th>
+              <th className="px-3 py-2 text-right font-medium">계약</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -210,15 +239,24 @@ export default function Weekly() {
                 <tr key={g} className="border-t border-line/70">
                   <td className="px-2 py-2.5 font-semibold text-ink-900">{g}</td>
                   <td></td>
-                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${go.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={go.length ? { color: C_OPP } : undefined}
+                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${go.length ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: go.length ? 1 : 0.45 }}
                     onClick={() => openOpp(go, `${g} 신규 영업기회`)}>{go.length}건</td>
-                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${ga.length ? 'cursor-pointer hover:underline' : 'text-ink-300'}`} style={ga.length ? { color: C_ACT } : undefined}
+                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${ga.length ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: ga.length ? 1 : 0.45 }}
                     onClick={() => openAct(ga, `${g} 영업활동`)}>{ga.length}건</td>
-                  <td className={`px-2 py-2.5 text-right tnum font-semibold ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
+                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
                     onClick={() => openCon(gc, `${g} 계약`)}>{gc.length}건</td>
+                  <td></td>
                 </tr>
               )
             })}
+            <tr className="border-t-2 border-line bg-canvas/60">
+              <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
+              <td></td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{cur.c.length}건</td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
         </div>
@@ -226,37 +264,58 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 영업기회·영업활동=주간 누계 / 이틀전·어제=영업활동 하루</span></div>
+        <div className="px-12 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 주간 누계 · ▲▼ = 담당자 평균 영업활동 대비</span></div>
         <div className="px-12">
         <table className="w-full table-fixed text-sm">
-          <colgroup><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /><col style={{ width: '20%' }} /></colgroup>
+          <colgroup><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col /></colgroup>
           <thead className="bg-canvas text-xs text-ink-500">
             <tr>
               <th className="px-2 py-2 text-left font-medium">담당자</th>
               <th className="px-2 py-2 text-left font-medium">그룹</th>
-              <th className="px-3 py-2 text-right font-medium">영업기회<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-3 py-2 text-right font-medium">영업활동<span className="font-normal text-ink-400"> (주간)</span></th>
-              <th className="px-2 py-2 text-right font-medium">이틀전/어제<span className="font-normal text-ink-400"> (활동)</span></th>
+              <th className="px-3 py-2 text-right font-medium">영업기회</th>
+              <th className="px-3 py-2 text-right font-medium">영업활동</th>
+              <th className="px-3 py-2 text-right font-medium">계약</th>
+              <th className="px-3 py-2 text-right font-medium">이틀전/어제</th>
             </tr>
           </thead>
           <tbody>
-            {repRows.map((r) => (
-              <tr key={r.rep} className="border-t border-line/70">
+            {repRows.map((r) => {
+              const gap = Math.round(r.a - avgA)
+              const low = avgA > 0 && r.a < avgA * 0.5
+              return (
+              <tr key={r.rep} className={`border-t border-line/70 ${low ? 'bg-lost/5' : ''}`}>
                 <td className="px-2 py-2.5 font-semibold text-ink-900">{r.rep}</td>
                 <td className="px-2 py-2.5 whitespace-nowrap text-ink-500">{r.group}</td>
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: r.o ? 1 : 0.45 }}
                   onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
-                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: r.a ? 1 : 0.45 }}
-                  onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</td>
-                <td className="px-2 py-2.5 text-right tnum text-sm font-semibold">
+                <td className="px-3 py-2.5 text-right">
+                  <span className={`tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: r.a ? 1 : 0.45 }}
+                    onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</span>
+                  <span title={`담당자 평균 ${avgA.toFixed(1)}건 대비`}
+                    className={`ml-1.5 text-[10px] font-bold tnum ${gap > 0 ? 'text-brand' : gap < 0 ? 'text-lost' : 'text-ink-300'}`}>
+                    {gap > 0 ? `▲${gap}` : gap < 0 ? `▼${Math.abs(gap)}` : '±0'}
+                  </span>
+                </td>
+                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.c ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
+                  onClick={() => r.c && openCon(cur.c.filter((x) => x.rep_name === r.rep), `${r.rep} 계약`)}>{r.c}건</td>
+                <td className="px-3 py-2.5 text-right tnum text-sm font-semibold">
                   <span className={r.d2A ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
-                    onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === day2Str), `${r.rep} 그제 영업활동`, label(day2Str))}>{r.d2A}</span>
+                    onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === day2Str), `${r.rep} 이틀전 영업활동`, label(day2Str))}>{r.d2A}</span>
                   <span className="text-ink-300"> / </span>
                   <span className={r.yA ? 'cursor-pointer text-ink-700 hover:underline' : 'text-ink-300'}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep && dOf(x.activity_date) === yestStr), `${r.rep} 어제 영업활동`, label(yestStr))}>{r.yA}</span>
                 </td>
               </tr>
-            ))}
+              )
+            })}
+            <tr className="border-t-2 border-line bg-canvas/60">
+              <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
+              <td className="px-2 py-2.5 text-xs text-ink-400">평균 {avgA.toFixed(1)}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</td>
+              <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{totals.c}건</td>
+              <td className="px-3 py-2.5 text-right tnum text-sm font-bold text-ink-700">{totals.d2A} / {totals.yA}</td>
+            </tr>
           </tbody>
         </table>
         </div>
