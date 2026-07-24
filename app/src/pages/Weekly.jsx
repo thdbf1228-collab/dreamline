@@ -29,6 +29,17 @@ function Delta({ now, prev }) {
   )
 }
 
+// 전주 대비 (표 안 작은 표기)
+function WoW({ now, prev }) {
+  const d = now - prev
+  return (
+    <span title={`지난주 ${prev}건 대비`}
+      className={`ml-1.5 text-[10px] font-bold tnum ${d > 0 ? 'text-brand' : d < 0 ? 'text-lost' : 'text-ink-300'}`}>
+      {d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '±0'}
+    </span>
+  )
+}
+
 export default function Weekly() {
   const { rows: opps, error: e1, loading: l1 } = useOpportunities()
   const { rows: acts, loading: l2 } = useActivities()
@@ -115,6 +126,24 @@ export default function Weekly() {
     }
     return [...m.values()].sort((x, y) => (y.a - x.a) || (y.o - x.o) || x.rep.localeCompare(y.rep))
   }, [roster, cur, yestStr, day2Str])
+
+  // 지난주 그룹별 건수 (전주 대비용)
+  const prevByGroup = useMemo(() => {
+    const m = {}
+    const add = (g, k) => { if (!g || isHiddenGroup(g)) return; m[g] = m[g] || { o: 0, a: 0 }; m[g][k] += 1 }
+    for (const r of (opps || [])) if (inRange(r.start_date, prev)) add(r.group_name, 'o')
+    for (const r of (acts || [])) if (inRange(r.activity_date, prev)) add(r.group_name, 'a')
+    return m
+  }, [opps, acts, prev])
+
+  // 지난주 담당자별 건수 (전주 대비용)
+  const prevByRep = useMemo(() => {
+    const m = {}
+    const add = (n, k) => { if (!n) return; m[n] = m[n] || { o: 0, a: 0 }; m[n][k] += 1 }
+    for (const r of (opps || [])) if (visible(r) && inRange(r.start_date, prev)) add(r.rep_name, 'o')
+    for (const r of (acts || [])) if (visible(r) && inRange(r.activity_date, prev)) add(r.rep_name, 'a')
+    return m
+  }, [opps, acts, prev])
 
   // 담당자 평균(영업활동) + 합계
   const avgA = repRows.length ? repRows.reduce((t, x) => t + x.a, 0) / repRows.length : 0
@@ -216,7 +245,7 @@ export default function Weekly() {
 
       {/* 그룹별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별</div>
+        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">그룹별 <span className="text-xs font-normal text-ink-400">▲▼ = 지난주 대비</span></div>
         <div className="px-4 pb-2">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col /></colgroup>
@@ -235,14 +264,21 @@ export default function Weekly() {
               const go = cur.o.filter((r) => r.group_name === g)
               const ga = cur.a.filter((r) => r.group_name === g)
               const gc = cur.c.filter((r) => r.group_name === g)
+              const pg = prevByGroup[g] || { o: 0, a: 0 }
               return (
                 <tr key={g} className="border-t border-line/70">
                   <td className="px-2 py-2.5 font-semibold text-ink-900">{g}</td>
                   <td></td>
-                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${go.length ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: go.length ? 1 : 0.45 }}
-                    onClick={() => openOpp(go, `${g} 신규 영업기회`)}>{go.length}건</td>
-                  <td className={`px-3 py-2.5 text-right tnum font-semibold ${ga.length ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: ga.length ? 1 : 0.45 }}
-                    onClick={() => openAct(ga, `${g} 영업활동`)}>{ga.length}건</td>
+                  <td className="px-3 py-2.5 text-right">
+                    <span className={`tnum font-semibold ${go.length ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: go.length ? 1 : 0.45 }}
+                      onClick={() => openOpp(go, `${g} 신규 영업기회`)}>{go.length}건</span>
+                    <WoW now={go.length} prev={pg.o} />
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <span className={`tnum font-semibold ${ga.length ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: ga.length ? 1 : 0.45 }}
+                      onClick={() => openAct(ga, `${g} 영업활동`)}>{ga.length}건</span>
+                    <WoW now={ga.length} prev={pg.a} />
+                  </td>
                   <td className={`px-3 py-2.5 text-right tnum font-semibold ${gc.length ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
                     onClick={() => openCon(gc, `${g} 계약`)}>{gc.length}건</td>
                   <td></td>
@@ -252,8 +288,14 @@ export default function Weekly() {
             <tr className="border-t-2 border-line bg-canvas/60">
               <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
               <td></td>
-              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</td>
-              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</td>
+              <td className="px-3 py-2.5 text-right">
+                <span className="tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</span>
+                <WoW now={cur.o.length} prev={prevCnt.o} />
+              </td>
+              <td className="px-3 py-2.5 text-right">
+                <span className="tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</span>
+                <WoW now={cur.a.length} prev={prevCnt.a} />
+              </td>
               <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{cur.c.length}건</td>
               <td></td>
             </tr>
@@ -264,7 +306,7 @@ export default function Weekly() {
 
       {/* 담당자별 */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 주간 누계 · ▲▼ = 담당자 평균 영업활동 대비</span></div>
+        <div className="px-4 pt-4 pb-2 text-sm font-bold text-ink-900">담당자별 <span className="text-xs font-normal text-ink-400">카운팅 대상 전원 · 0건 포함 · 주간 누계 · ▲▼ = 지난주 대비</span></div>
         <div className="px-4 pb-2">
         <table className="w-full table-fixed text-sm">
           <colgroup><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col style={{ width: '16.6%' }} /><col /></colgroup>
@@ -280,21 +322,21 @@ export default function Weekly() {
           </thead>
           <tbody>
             {repRows.map((r) => {
-              const gap = Math.round(r.a - avgA)
+              const pr = prevByRep[r.rep] || { o: 0, a: 0 }
               const low = avgA > 0 && r.a < avgA * 0.5
               return (
               <tr key={r.rep} className={`border-t border-line/70 ${low ? 'bg-lost/5' : ''}`}>
                 <td className="px-2 py-2.5 font-semibold text-ink-900">{r.rep}</td>
                 <td className="px-2 py-2.5 whitespace-nowrap text-ink-500">{r.group}</td>
-                <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: r.o ? 1 : 0.45 }}
-                  onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</td>
+                <td className="px-3 py-2.5 text-right">
+                  <span className={`tnum font-semibold ${r.o ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_OPP, opacity: r.o ? 1 : 0.45 }}
+                    onClick={() => openOpp(cur.o.filter((x) => x.rep_name === r.rep), `${r.rep} 신규 영업기회`)}>{r.o}건</span>
+                  <WoW now={r.o} prev={pr.o} />
+                </td>
                 <td className="px-3 py-2.5 text-right">
                   <span className={`tnum font-semibold ${r.a ? 'cursor-pointer hover:underline' : ''}`} style={{ color: C_ACT, opacity: r.a ? 1 : 0.45 }}
                     onClick={() => openAct(cur.a.filter((x) => x.rep_name === r.rep), `${r.rep} 영업활동`)}>{r.a}건</span>
-                  <span title={`담당자 평균 ${avgA.toFixed(1)}건 대비`}
-                    className={`ml-1.5 text-[10px] font-bold tnum ${gap > 0 ? 'text-brand' : gap < 0 ? 'text-lost' : 'text-ink-300'}`}>
-                    {gap > 0 ? `▲${gap}` : gap < 0 ? `▼${Math.abs(gap)}` : '±0'}
-                  </span>
+                  <WoW now={r.a} prev={pr.a} />
                 </td>
                 <td className={`px-3 py-2.5 text-right tnum font-semibold ${r.c ? 'cursor-pointer hover:underline text-ink-700' : 'text-ink-300'}`}
                   onClick={() => r.c && openCon(cur.c.filter((x) => x.rep_name === r.rep), `${r.rep} 계약`)}>{r.c}건</td>
@@ -311,8 +353,14 @@ export default function Weekly() {
             <tr className="border-t-2 border-line bg-canvas/60">
               <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
               <td className="px-2 py-2.5 text-xs text-ink-400">평균 {avgA.toFixed(1)}건</td>
-              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</td>
-              <td className="px-3 py-2.5 text-right tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</td>
+              <td className="px-3 py-2.5 text-right">
+                <span className="tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</span>
+                <WoW now={totals.o} prev={prevCnt.o} />
+              </td>
+              <td className="px-3 py-2.5 text-right">
+                <span className="tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</span>
+                <WoW now={totals.a} prev={prevCnt.a} />
+              </td>
               <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{totals.c}건</td>
               <td className="px-3 py-2.5 text-right tnum text-sm font-bold text-ink-700">{totals.d2A} / {totals.yA}</td>
             </tr>
