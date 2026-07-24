@@ -34,11 +34,12 @@ function WoW({ now, prev }) {
   const d = now - prev
   return (
     <span title={`지난주 ${prev}건 대비`}
-      className={`ml-1.5 text-[10px] font-bold tnum ${d > 0 ? 'text-brand' : d < 0 ? 'text-lost' : 'text-ink-300'}`}>
-      {d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '±0'}
+      className={`ml-1.5 inline-block w-7 text-left text-[10px] font-bold tnum ${d > 0 ? 'text-brand' : d < 0 ? 'text-lost' : 'text-ink-300'}`}>
+      {d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '–'}
     </span>
   )
 }
+
 
 export default function Weekly() {
   const { rows: opps, error: e1, loading: l1 } = useOpportunities()
