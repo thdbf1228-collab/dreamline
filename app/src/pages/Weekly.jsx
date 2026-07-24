@@ -150,7 +150,7 @@ export default function Weekly() {
 
       {/* 요약 카드 */}
       <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openOpp(cur.o, '이번 주 신규 영업기회')}>
+        <Card className="py-4 px-12 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openOpp(cur.o, '이번 주 신규 영업기회')}>
           <div className="text-sm text-ink-500">신규 영업기회 <span className="text-ink-400">(시작일)</span></div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-bold tnum" style={{ color: C_OPP }}>{num(cur.o.length)}건</span>
@@ -158,7 +158,7 @@ export default function Weekly() {
           </div>
           <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.o}건</div>
         </Card>
-        <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openAct(cur.a, '이번 주 영업활동')}>
+        <Card className="py-4 px-12 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openAct(cur.a, '이번 주 영업활동')}>
           <div className="text-sm text-ink-500">영업활동 <span className="text-ink-400">(활동일시)</span></div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-bold tnum" style={{ color: C_ACT }}>{num(cur.a.length)}건</span>
@@ -166,7 +166,7 @@ export default function Weekly() {
           </div>
           <div className="mt-0.5 text-xs text-ink-400">지난주 {prevCnt.a}건</div>
         </Card>
-        <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openCon(cur.c, '이번 주 계약')}>
+        <Card className="py-4 px-12 cursor-pointer hover:ring-2 hover:ring-brand/30" onClick={() => openCon(cur.c, '이번 주 계약')}>
           <div className="text-sm text-ink-500">계약 <span className="text-ink-400">(계약일)</span></div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="text-2xl font-bold tnum text-ink-900">{num(cur.c.length)}건</span>
