@@ -52,32 +52,27 @@ export default function Weekly() {
 
   // 기준일 = 어제 (오늘 데이터는 아직 업로드 전이라 제외). weekOffset 주 단위 이동.
   const baseEnd = addDays(new Date(), weekOffset * 7 - 1)
+  const isBiz = (d) => { const day = d.getDay(); return day !== 0 && day !== 6 && !holidays.includes(ymd(d)) }
+  // 기준일부터 거꾸로 영업일 n일 수집(주말·공휴일 제외)
+  const collectBiz = (endDate, n) => {
+    const arr = []; let cur = new Date(endDate)
+    while (arr.length < n) { if (isBiz(cur)) arr.push(ymd(cur)); cur = addDays(cur, -1) }
+    return arr // 최신순
+  }
+  // 이번 주 = 최근 5영업일, 지난주 = 그 이전 5영업일
+  const bizAll = useMemo(() => collectBiz(baseEnd, 10), [baseEnd, holidays])
+  const curDays = useMemo(() => new Set(bizAll.slice(0, 5)), [bizAll])
+  const prevDays = useMemo(() => new Set(bizAll.slice(5, 10)), [bizAll])
   const range = useMemo(() => {
-    const end = new Date(baseEnd)
-    return { start: ymd(addDays(end, -6)), end: ymd(end) }
-  }, [weekOffset])
-  const prev = useMemo(() => {
-    const end = addDays(new Date(baseEnd), -7)
-    return { start: ymd(addDays(end, -6)), end: ymd(end) }
-  }, [weekOffset])
-  // 영업일(주말·공휴일 제외) 기준 최근 2일 — 날짜별 현황과 동일 기준
-  const bizDays = useMemo(() => {
-    const arr = []
-    let cur = new Date(baseEnd)
-    // 기준일이 주말/공휴일이면 그 이전 영업일부터
-    while (arr.length < 2) {
-      const day = cur.getDay()
-      const d = ymd(cur)
-      if (day !== 0 && day !== 6 && !holidays.includes(d)) arr.push(d)
-      cur = addDays(cur, -1)
-    }
-    return arr // [어제(최근 영업일), 이틀전]
-  }, [baseEnd, holidays])
-  const yestStr = bizDays[0]   // 최근 영업일(어제)
-  const day2Str = bizDays[1]   // 그 전 영업일(이틀전)
+    const d = [...curDays].sort()
+    return { start: d[0] || ymd(baseEnd), end: d[d.length - 1] || ymd(baseEnd), set: curDays }
+  }, [curDays])
+  const prev = useMemo(() => ({ set: prevDays }), [prevDays])
+  const yestStr = bizAll[0]   // 최근 영업일(어제)
+  const day2Str = bizAll[1]   // 그 전 영업일(이틀전)
 
   const dOf = (v) => (v || '').slice(0, 10)
-  const inRange = (v, r) => { const d = dOf(v); return d && d >= r.start && d <= r.end }
+  const inRange = (v, r) => r.set.has(dOf(v))
   const visible = (r) => r.group_name && !isHiddenGroup(r.group_name)
   const oppTitle = (oid) => (opps || []).find((o) => String(o.external_id) === String(oid))?.title || null
 
@@ -95,24 +90,14 @@ export default function Weekly() {
 
   // 일자별 (7일)
   const days = useMemo(() => {
-    const arr = []
-    let cursor = new Date(range.end)
-    while (arr.length < 5) {
-      const day = cursor.getDay()
-      if (day !== 0 && day !== 6) { // 주말은 건너뜀
-        const d = ymd(cursor)
-        arr.unshift({
-          date: d,
-          dow: DOW[day],
-          holiday: holidays.includes(d),
-          o: cur.o.filter((r) => dOf(r.start_date) === d).length,
-          a: cur.a.filter((r) => dOf(r.activity_date) === d).length,
-        })
-      }
-      cursor = addDays(cursor, -1)
-    }
-    return arr
-  }, [cur, range, holidays])
+    return [...curDays].sort().map((d) => ({
+      date: d,
+      dow: DOW[new Date(d).getDay()],
+      holiday: false,
+      o: cur.o.filter((r) => dOf(r.start_date) === d).length,
+      a: cur.a.filter((r) => dOf(r.activity_date) === d).length,
+    }))
+  }, [cur, curDays])
   const maxDay = Math.max(1, ...days.filter((d) => !d.holiday).map((d) => Math.max(d.o, d.a)))
 
   const groups = useMemo(() => {
@@ -180,7 +165,7 @@ export default function Weekly() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink-900">주간현황</h1>
-          <p className="text-sm text-ink-500">{range.start.replaceAll('-', '.')} ~ {range.end.replaceAll('-', '.')} · 어제까지 최근 7일</p>
+          <p className="text-sm text-ink-500">{range.start.replaceAll('-', '.')} ~ {range.end.replaceAll('-', '.')} · 최근 영업일 5일 (주말·공휴일 제외)</p>
         </div>
         <select value={weekOffset} onChange={(e) => setWeekOffset(Number(e.target.value))}
           className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm text-ink-700 focus:border-brand">
