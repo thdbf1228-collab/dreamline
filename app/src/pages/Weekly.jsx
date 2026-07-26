@@ -34,7 +34,7 @@ function WoW({ now, prev }) {
   const d = now - prev
   return (
     <span title={`지난주 ${prev}건 대비`}
-      className={`ml-1.5 inline-block w-7 text-left text-[10px] font-bold tnum ${d > 0 ? 'text-brand' : d < 0 ? 'text-lost' : 'text-ink-300'}`}>
+      className={`ml-1.5 inline-block w-9 text-left text-[10px] font-bold tnum ${d > 0 ? 'text-brand' : d < 0 ? 'text-lost' : 'text-ink-300'}`}>
       {d > 0 ? `▲${d}` : d < 0 ? `▼${Math.abs(d)}` : '–'}
     </span>
   )
@@ -60,8 +60,21 @@ export default function Weekly() {
     const end = addDays(new Date(baseEnd), -7)
     return { start: ymd(addDays(end, -6)), end: ymd(end) }
   }, [weekOffset])
-  const yestStr = ymd(baseEnd)                    // 기준일(어제)
-  const day2Str = ymd(addDays(new Date(baseEnd), -1))  // 그 전날(이틀전)
+  // 영업일(주말·공휴일 제외) 기준 최근 2일 — 날짜별 현황과 동일 기준
+  const bizDays = useMemo(() => {
+    const arr = []
+    let cur = new Date(baseEnd)
+    // 기준일이 주말/공휴일이면 그 이전 영업일부터
+    while (arr.length < 2) {
+      const day = cur.getDay()
+      const d = ymd(cur)
+      if (day !== 0 && day !== 6 && !holidays.includes(d)) arr.push(d)
+      cur = addDays(cur, -1)
+    }
+    return arr // [어제(최근 영업일), 이틀전]
+  }, [baseEnd, holidays])
+  const yestStr = bizDays[0]   // 최근 영업일(어제)
+  const day2Str = bizDays[1]   // 그 전 영업일(이틀전)
 
   const dOf = (v) => (v || '').slice(0, 10)
   const inRange = (v, r) => { const d = dOf(v); return d && d >= r.start && d <= r.end }
@@ -254,8 +267,8 @@ export default function Weekly() {
             <tr>
               <th className="px-2 py-2 text-left font-medium">그룹</th>
               <th></th>
-              <th className="px-3 py-2 text-right font-medium">영업기회<span className="ml-1.5 inline-block w-7" /></th>
-              <th className="px-3 py-2 text-right font-medium">영업활동<span className="ml-1.5 inline-block w-7" /></th>
+              <th className="px-3 py-2 text-right font-medium">영업기회<span className="ml-1.5 inline-block w-9" /></th>
+              <th className="px-3 py-2 text-right font-medium">영업활동<span className="ml-1.5 inline-block w-9" /></th>
               <th className="px-3 py-2 text-right font-medium">계약</th>
               <th></th>
             </tr>
@@ -289,8 +302,8 @@ export default function Weekly() {
             <tr className="border-t-2 border-line bg-canvas/60">
               <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
               <td></td>
-              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</span><span className="ml-1.5 inline-block w-7" /></td>
-              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</span><span className="ml-1.5 inline-block w-7" /></td>
+              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_OPP }}>{cur.o.length}건</span><span className="ml-1.5 inline-block w-9" /></td>
+              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_ACT }}>{cur.a.length}건</span><span className="ml-1.5 inline-block w-9" /></td>
               <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{cur.c.length}건</td>
               <td></td>
             </tr>
@@ -309,8 +322,8 @@ export default function Weekly() {
             <tr>
               <th className="px-2 py-2 text-left font-medium">담당자</th>
               <th className="px-2 py-2 text-left font-medium">그룹</th>
-              <th className="px-3 py-2 text-right font-medium">영업기회<span className="ml-1.5 inline-block w-7" /></th>
-              <th className="px-3 py-2 text-right font-medium">영업활동<span className="ml-1.5 inline-block w-7" /></th>
+              <th className="px-3 py-2 text-right font-medium">영업기회<span className="ml-1.5 inline-block w-9" /></th>
+              <th className="px-3 py-2 text-right font-medium">영업활동<span className="ml-1.5 inline-block w-9" /></th>
               <th className="px-3 py-2 text-right font-medium">계약</th>
               <th className="px-3 py-2 text-right font-medium">이틀전/어제</th>
             </tr>
@@ -348,8 +361,8 @@ export default function Weekly() {
             <tr className="border-t-2 border-line bg-canvas/60">
               <td className="px-2 py-2.5 font-bold text-ink-900">합계</td>
               <td className="px-2 py-2.5 text-xs text-ink-400">평균 {avgA.toFixed(1)}건</td>
-              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</span><span className="ml-1.5 inline-block w-7" /></td>
-              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</span><span className="ml-1.5 inline-block w-7" /></td>
+              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_OPP }}>{totals.o}건</span><span className="ml-1.5 inline-block w-9" /></td>
+              <td className="px-3 py-2.5 text-right"><span className="tnum font-bold" style={{ color: C_ACT }}>{totals.a}건</span><span className="ml-1.5 inline-block w-9" /></td>
               <td className="px-3 py-2.5 text-right tnum font-bold text-ink-900">{totals.c}건</td>
               <td className="px-3 py-2.5 text-right tnum text-sm font-bold text-ink-700">{totals.d2A} / {totals.yA}</td>
             </tr>
