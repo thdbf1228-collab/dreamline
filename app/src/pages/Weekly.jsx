@@ -52,7 +52,7 @@ export default function Weekly() {
 
   // 기준일 = 어제 (오늘 데이터는 아직 업로드 전이라 제외). weekOffset 주 단위 이동.
   const baseEnd = addDays(new Date(), weekOffset * 7 - 1)
-  const isBiz = (d) => { const day = d.getDay(); return day !== 0 && day !== 6 && !holidays.includes(ymd(d)) }
+  const isBiz = (d) => { const day = d.getDay(); return day !== 0 && day !== 6 } // 주말만 제외(공휴일은 칸 유지)
   // 기준일부터 거꾸로 영업일 n일 수집(주말·공휴일 제외)
   const collectBiz = (endDate, n) => {
     const arr = []; let cur = new Date(endDate)
@@ -93,11 +93,11 @@ export default function Weekly() {
     return [...curDays].sort().map((d) => ({
       date: d,
       dow: DOW[new Date(d).getDay()],
-      holiday: false,
+      holiday: holidays.includes(d),
       o: cur.o.filter((r) => dOf(r.start_date) === d).length,
       a: cur.a.filter((r) => dOf(r.activity_date) === d).length,
     }))
-  }, [cur, curDays])
+  }, [cur, curDays, holidays])
   const maxDay = Math.max(1, ...days.filter((d) => !d.holiday).map((d) => Math.max(d.o, d.a)))
 
   const groups = useMemo(() => {
