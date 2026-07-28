@@ -188,7 +188,7 @@ export default function Revenue() {
       {/* 요약 (매출현황 탭만) */}
       {!isPipe && (
         <div className="flex items-center gap-5 bg-paper border border-line rounded-xl shadow-card px-4 py-3.5 mb-3.5 flex-wrap">
-          <div className="flex flex-col"><span className="text-[11px] text-ink-500">기간</span><span className="text-base font-extrabold mt-0.5">{P.tot.label}</span></div>
+          <div className="flex flex-col"><span className="text-[11px] text-ink-500">기간</span><span className="text-xl font-extrabold mt-0.5">{P.tot.label}</span></div>
           <span className="w-px self-stretch bg-line" />
           <div className="flex flex-col"><span className="text-[11px] text-ink-500">계획</span><span className="text-xl font-extrabold tabular-nums mt-0.5">{comma(tot.plan)}</span></div>
           <div className="flex flex-col"><span className="text-[11px] text-ink-500">실적+예상</span><span className="text-xl font-extrabold tabular-nums mt-0.5">{comma(tot.val)}</span></div>
