@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { ingestOpportunities, ingestContracts, ingestActivities } from '../lib/upload'
+import { ingestRevenueWorkbook, ingestEbitda } from '../lib/revenueUpload'
 import { Card } from '../components/ui'
 
 const PHOTO_BUCKET = 'rep-photos'
@@ -84,6 +85,7 @@ export default function Admin() {
         <p className="text-sm text-ink-500">관리자 전용</p>
       </header>
       <UploadPanel />
+      <RevenueUploadPanel />
       <NoticePanel />
       <HolidayPanel />
       <GroupPanel groups={groups} reload={loadGroups} />
@@ -153,6 +155,45 @@ function FileField({ label, inputRef }) {
       <label className="block text-xs font-medium text-ink-700 mb-1">{label}</label>
       <input ref={inputRef} type="file" accept=".xlsx,.xls" className="block w-full text-sm text-ink-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand" />
     </div>
+  )
+}
+
+function RevenueUploadPanel() {
+  const dataRef = useRef(), ebitRef = useRef()
+  const [busy, setBusy] = useState(false)
+  const [logs, setLogs] = useState([])
+  const log = (m) => setLogs((l) => [...l, m])
+  async function run() {
+    const d = dataRef.current?.files?.[0], e = ebitRef.current?.files?.[0]
+    if (!d && !e) return log('업로드할 파일을 선택하세요.')
+    setBusy(true); setLogs([])
+    try {
+      if (d) { const r = await ingestRevenueWorkbook(d, log); log('✅ 매출데이터 완료. ' + JSON.stringify(r.pipes)) }
+      if (e) { await ingestEbitda(e, log); log('✅ 에비타 완료.') }
+    } catch (err) { log('❌ ' + err.message) } finally { setBusy(false) }
+  }
+  return (
+    <Card className="p-5">
+      <h2 className="text-sm font-semibold text-ink-900 mb-1">매출현황 업로드</h2>
+      <p className="text-xs text-ink-400 mb-4">
+        필요한 것만 올려도 됩니다. <b>매출데이터</b>: 매출달성계획 + 파이프라인 1·2·3그룹이 든 워크북 1개.
+        <b> 에비타</b>: 공헌이익2 별도 파일. 7~12월 예상매출은 파이프라인으로 자동 계산됩니다.
+      </p>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-ink-700 mb-1">① 매출데이터 (매출 + 파이프라인 1·2·3그룹)</label>
+          <input ref={dataRef} type="file" accept=".xlsx,.xls" className="block w-full text-sm text-ink-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-ink-700 mb-1">② 에비타 (공헌이익2)</label>
+          <input ref={ebitRef} type="file" accept=".xlsx,.xls" className="block w-full text-sm text-ink-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-sm file:font-medium file:text-brand" />
+        </div>
+      </div>
+      <button onClick={run} disabled={busy} className="mt-3 block rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-dark disabled:opacity-50">
+        {busy ? '처리 중…' : '업로드 (올린 것만 반영)'}
+      </button>
+      {logs.length > 0 && <div className="mt-4 rounded-lg bg-canvas p-3 text-xs text-ink-700 space-y-1 font-mono">{logs.map((l, i) => <div key={i}>{l}</div>)}</div>}
+    </Card>
   )
 }
 

@@ -8,6 +8,7 @@ const NAV = [
   { to: '/accounts', label: '파이프라인', icon: '🧩' },
   { to: '/contracts', label: '계약', icon: '📝' },
   { to: '/activity', label: '활동', icon: '📞' },
+  { to: '/revenue', label: '매출현황', icon: '📈' },
 ]
 
 // 섹션 소제목 + 얇은 구분선
@@ -69,10 +70,6 @@ export default function Layout({ children }) {
               <span><span className="mr-1.5 text-[11px]">🔑</span>키맨</span>
               <span className="text-[11px] text-ink-300">↗</span>
             </a>
-            <div className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-ink-300" title="준비중입니다">
-              <span><span className="mr-1.5 text-[11px]">📈</span>매출실적</span>
-              <span className="rounded bg-canvas px-1 py-px text-[8px] text-ink-400">준비중</span>
-            </div>
           </div>
         </nav>
       </aside>
@@ -97,9 +94,6 @@ export default function Layout({ children }) {
             className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-600">
             <span className="mr-1 text-[10px]">🔑</span>키맨
           </a>
-          <span className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-canvas px-3 py-1.5 text-sm font-medium text-ink-300">
-            <span className="mr-1 text-[10px]">📈</span>매출실적
-          </span>
         </nav>
       </header>
 

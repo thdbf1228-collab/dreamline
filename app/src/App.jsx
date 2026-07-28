@@ -10,6 +10,7 @@ import Accounts from './pages/Accounts'
 import Contracts from './pages/Contracts'
 import Activity from './pages/Activity'
 import Weekly from './pages/Weekly'
+import Revenue from './pages/Revenue'
 
 const Admin = lazy(() => import('./pages/Admin'))
 
@@ -37,6 +38,7 @@ function Gate() {
         <Route path="/contracts" element={<Contracts />} />
         <Route path="/activity" element={<Activity />} />
         <Route path="/weekly" element={<Weekly />} />
+        <Route path="/revenue" element={<Revenue />} />
         <Route path="/admin" element={<AdminGate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
