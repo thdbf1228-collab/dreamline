@@ -62,6 +62,13 @@ export default function Layout({ children }) {
             {isAdmin && <NavLink to="/admin" className={sideClass}><span className="mr-1.5 text-[11px]">⚙️</span>관리자</NavLink>}
           </div>
 
+          <SectionLabel>실적</SectionLabel>
+          <div className="space-y-1">
+            <NavLink to="/revenue" className={sideClass}>
+              <span className="mr-1.5 text-[11px]">📈</span>매출현황
+            </NavLink>
+          </div>
+
           <SectionLabel>바로가기</SectionLabel>
           <div className="space-y-1">
             <a href="https://dreamline-sales.vercel.app/" target="_blank" rel="noopener noreferrer"
@@ -69,13 +76,6 @@ export default function Layout({ children }) {
               <span><span className="mr-1.5 text-[11px]">🔑</span>키맨</span>
               <span className="text-[11px] text-ink-300">↗</span>
             </a>
-          </div>
-
-          <SectionLabel>실적</SectionLabel>
-          <div className="space-y-1">
-            <NavLink to="/revenue" className={sideClass}>
-              <span className="mr-1.5 text-[11px]">📈</span>매출현황
-            </NavLink>
           </div>
         </nav>
       </aside>
@@ -96,13 +96,13 @@ export default function Layout({ children }) {
               {n.badge && <span className="ml-1 rounded bg-lost/55 px-1 text-[9px] font-bold text-white badge-pulse">{n.badge}</span>}
             </NavLink>
           ))}
+          <NavLink to="/revenue" className={pillClass}>
+            <span className="mr-1 text-[10px]">📈</span>매출현황
+          </NavLink>
           <a href="https://dreamline-sales.vercel.app/" target="_blank" rel="noopener noreferrer"
             className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-600">
             <span className="mr-1 text-[10px]">🔑</span>키맨
           </a>
-          <NavLink to="/revenue" className={pillClass}>
-            <span className="mr-1 text-[10px]">📈</span>매출현황
-          </NavLink>
         </nav>
       </header>
 

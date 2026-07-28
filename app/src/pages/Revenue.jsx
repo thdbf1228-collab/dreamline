@@ -3,7 +3,10 @@ import { useRevenue } from '../data/useRevenue'
 
 // ── 색/스타일 상수 (로즈 테마) ──
 const HDR = '#6E4A54'
-const TINT = { '주요매출': '#EFDBD5', '합계': '#EFDBD5', '엔터프라이즈 1,2그룹': '#F7EAE6', '엔터프라이즈 3그룹': '#F7EAE6', '글로벌': '#FCF5F2', '기업': '#FCF5F2' }
+// 매출현황 표: 주요매출(진함) > 엔터그룹(중간) > 글로벌·기업(연함)
+const TINT = { '주요매출': '#EFDBD5', '엔터프라이즈 1,2그룹': '#F7EAE6', '엔터프라이즈 3그룹': '#F7EAE6', '글로벌': '#FDF8F6', '기업': '#FDF8F6' }
+// 공헌이익2 표: 엔터1,2·엔터3 행을 글로벌·기업과 동일한 연한 톤으로
+const TINT_EBIT = { '합계': '#EFDBD5', '엔터프라이즈 1,2그룹': '#FDF8F6', '엔터프라이즈 3그룹': '#FDF8F6' }
 const FC = '#98A2B3', FCBG = '#F3F5F8', BRAND = '#1D4ED8', LOST = '#E02424'
 const comma = (v) => Math.round(Number(v) || 0).toLocaleString('ko-KR')
 const comma1 = (v) => { const n = Math.round((Number(v) || 0) * 10) / 10; return n.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) }
@@ -13,9 +16,9 @@ const CATS = [
   { c: 'all', label: '전체' }, { c: 'q', label: '분기' }, { c: 'h1', label: '상반기' }, { c: 'pipe', label: '예상 파이프라인' },
 ]
 function periodsFor(cat) {
-  if (cat === 'q') return { cols: [{ ms: [1,2,3], label: '1분기', conf: true }, { ms: [4,5,6], label: '2분기', conf: true }, { ms: [7,8,9], label: '3분기', conf: false }, { ms: [10,11,12], label: '4분기', conf: false }], tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '연간 누계', conf: false } }
+  if (cat === 'q') return { cols: [{ ms: [1,2,3], label: '1분기', conf: true }, { ms: [4,5,6], label: '2분기', conf: true }, { ms: [7,8,9], label: '3분기', conf: false }, { ms: [10,11,12], label: '4분기', conf: false }], tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '2026년', conf: false } }
   if (cat === 'h1') return { cols: Array.from({ length: 6 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: true })), tot: { ms: [1,2,3,4,5,6], label: '상반기 누계', conf: true } }
-  return { cols: Array.from({ length: 12 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: i < 6 })), tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '연간 누계', conf: false } }
+  return { cols: Array.from({ length: 12 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: i < 6 })), tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '2026년', conf: false } }
 }
 const agg = (row, ms) => ms.reduce((o, m) => ({ plan: o.plan + row.months[m].plan, val: o.val + row.months[m].val }), { plan: 0, val: 0 })
 
@@ -34,10 +37,9 @@ function Trio({ o, conf, tot, rowBg }) {
   )
 }
 
-function RevTable({ rows, P, expanded, onToggle }) {
-  const GROUPS = ['글로벌', '기업', '엔터프라이즈 3그룹']
+function RevTable({ rows, P, expanded, onToggle, tint = TINT }) {
   const renderRow = (row) => {
-    const bg = TINT[row.label]
+    const bg = tint[row.label]
     const pad = 12 + (row.level || 0) * 16
     const hasKid = row.kids && row.kids.length
     const exp = expanded[row.label]
@@ -63,7 +65,7 @@ function RevTable({ rows, P, expanded, onToggle }) {
           <th rowSpan={2} className="px-2.5 py-2 text-left sticky left-0 z-[4] bg-[#FbFcFd] text-ink-500 font-semibold border-b border-line" style={{ minWidth: 180, borderRight: '2px solid #E5E8EC' }}>구분</th>
           {P.cols.map((c, i) => (
             <th key={i} colSpan={3} className="px-2.5 py-2 text-center bg-[#FbFcFd] text-ink-500 font-semibold border-b border-line" style={{ borderLeft: '1px solid #E5E8EC' }}>
-              {c.label}<span className="ml-1 text-[9px] font-bold rounded-lg px-1.5 py-px" style={{ background: c.conf ? '#EDEDEF' : '#EEF0F3', color: c.conf ? '#1F2430' : FC }}>{c.conf ? '확정' : '예상'}</span>
+              {c.label}<span className="ml-1 text-[9px] font-bold rounded-lg px-1.5 py-px" style={{ background: c.conf ? '#475569' : '#EEF0F3', color: c.conf ? '#fff' : FC }}>{c.conf ? '확정' : '예상'}</span>
             </th>
           ))}
           <th colSpan={3} className="px-2.5 py-2 text-center bg-[#FbFcFd] font-semibold border-b border-line" style={{ borderLeft: '2px solid #E5E8EC', color: BRAND }}>{P.tot.label}</th>
@@ -213,7 +215,7 @@ export default function Revenue() {
               <span className="text-[15px] font-bold text-white">공헌이익2 (EBITDA)</span>
               <span className="text-xs" style={{ color: 'rgba(255,255,255,.66)' }}>별도 업로드 · 매출 합계 미포함</span>
             </div>
-            <div className="overflow-x-auto"><RevTable rows={model.ebit} P={P} expanded={expanded} onToggle={toggle} /></div>
+            <div className="overflow-x-auto"><RevTable rows={model.ebit} P={P} expanded={expanded} onToggle={toggle} tint={TINT_EBIT} /></div>
             <div className="text-[11px] text-ink-400 px-4 py-2 text-right">단위: 백만원</div>
           </div>
         </>
