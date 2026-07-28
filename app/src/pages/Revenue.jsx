@@ -13,12 +13,15 @@ const comma1 = (v) => { const n = Math.round((Number(v) || 0) * 10) / 10; return
 const rate = (p, a) => { const r = p ? (a / p) * 100 : 0; return { r, c: r >= 100 ? BRAND : (p ? LOST : FC) } }
 
 const CATS = [
-  { c: 'all', label: '전체' }, { c: 'q', label: '분기' }, { c: 'h1', label: '상반기' }, { c: 'pipe', label: '예상 파이프라인' },
+  { c: 'all', label: '전체' }, { c: 'q', label: '분기' }, { c: 'h1', label: '상반기' }, { c: 'h2', label: '하반기' }, { c: 'pipe', label: '예상 파이프라인' },
 ]
-function periodsFor(cat) {
-  if (cat === 'q') return { cols: [{ ms: [1,2,3], label: '1분기', conf: true }, { ms: [4,5,6], label: '2분기', conf: true }, { ms: [7,8,9], label: '3분기', conf: false }, { ms: [10,11,12], label: '4분기', conf: false }], tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '2026년', conf: false } }
-  if (cat === 'h1') return { cols: Array.from({ length: 6 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: true })), tot: { ms: [1,2,3,4,5,6], label: '상반기 누계', conf: true } }
-  return { cols: Array.from({ length: 12 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: i < 6 })), tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '2026년', conf: false } }
+// lastConf = 마지막 확정월(자동감지). 그 이하 월은 확정, 초과는 예상.
+function periodsFor(cat, lastConf = 6) {
+  const mc = (m) => m <= lastConf
+  if (cat === 'q') return { cols: [{ ms: [1,2,3], label: '1분기', conf: mc(3) }, { ms: [4,5,6], label: '2분기', conf: mc(6) }, { ms: [7,8,9], label: '3분기', conf: mc(9) }, { ms: [10,11,12], label: '4분기', conf: mc(12) }], tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '2026년', conf: mc(12) } }
+  if (cat === 'h1') return { cols: Array.from({ length: 6 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: mc(i+1) })), tot: { ms: [1,2,3,4,5,6], label: '상반기 누계', conf: mc(6) } }
+  if (cat === 'h2') return { cols: Array.from({ length: 6 }, (_, i) => ({ ms: [i+7], label: `${i+7}월`, conf: mc(i+7) })), tot: { ms: [7,8,9,10,11,12], label: '하반기 누계', conf: mc(12) } }
+  return { cols: Array.from({ length: 12 }, (_, i) => ({ ms: [i+1], label: `${i+1}월`, conf: mc(i+1) })), tot: { ms: [1,2,3,4,5,6,7,8,9,10,11,12], label: '2026년', conf: mc(12) } }
 }
 const agg = (row, ms) => ms.reduce((o, m) => ({ plan: o.plan + row.months[m].plan, val: o.val + row.months[m].val }), { plan: 0, val: 0 })
 
@@ -125,7 +128,7 @@ export default function Revenue() {
   const [dir, setDir] = useState('all')
   const [mon, setMon] = useState('all')
 
-  const P = useMemo(() => periodsFor(cat), [cat])
+  const P = useMemo(() => periodsFor(cat, model?.lastConf ?? 6), [cat, model])
   const toggle = (label) => setExpanded((e) => ({ ...e, [label]: !e[label] }))
   const GROUPS = ['글로벌', '기업', '엔터프라이즈 3그룹']
   const expandAll = () => { const all = GROUPS.every((g) => expanded[g]); setExpanded(Object.fromEntries(GROUPS.map((g) => [g, !all]))) }
@@ -204,7 +207,7 @@ export default function Revenue() {
         <>
           <div className="bg-paper border border-line rounded-xl shadow-card overflow-hidden mb-4">
             <div className="px-4 py-3 flex items-center justify-between" style={{ background: HDR }}>
-              <span className="text-[15px] font-bold text-white">매출현황 · {cat === 'all' ? '전체(월별)' : cat === 'q' ? '분기별' : '상반기(월별)'}</span>
+              <span className="text-[15px] font-bold text-white">매출현황 · {cat === 'all' ? '전체(월별)' : cat === 'q' ? '분기별' : cat === 'h1' ? '상반기(월별)' : '하반기(월별)'}</span>
               <span className="text-xs" style={{ color: 'rgba(255,255,255,.66)' }}>각 기간: 계획 / 실적·예상 / 달성률 · ▸ 그룹 클릭 시 상품군 펼침</span>
             </div>
             <div className="overflow-x-auto"><RevTable rows={model.rows} P={P} expanded={expanded} onToggle={toggle} /></div>

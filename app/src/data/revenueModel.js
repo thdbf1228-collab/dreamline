@@ -68,8 +68,7 @@ function flatItems(pipes) {
     for (const it of pipes[sheet]) {
       const group = gmap(it.구분)
       if (!group) continue
-      if (!it.반영) continue          // 확률 ≥50%만
-      if (!(it.월 >= 7)) continue     // 예상 구간(7~12월)
+      if (!it.반영) continue          // 확률 ≥50%만  (예상 구간 필터는 lastConf 기준으로 forecast()에서 처리)
       const one = isOne(it.성격)
       out.push({ group, subkey: subkeyFor(group, it.상품, it.세부, one), month: it.월, amount: Number(it.증감액) || 0, one })
     }
@@ -77,36 +76,37 @@ function flatItems(pipes) {
   return out
 }
 
-// 예상값 = baseline6 + Σ(recurring, month<=m) + (onetime, month==m)
-function forecast(items, match, baseline6, m) {
+// 예상값 = baseline(마지막 확정월 실적) + Σ(recurring, lastConf<month<=m) + (onetime, month==m>lastConf)
+function forecast(items, match, baseline, m, lastConf) {
   let recur = 0, onet = 0
   for (const it of items) {
     if (!match(it)) continue
+    if (it.month <= lastConf) continue        // 이미 확정 실적에 반영된 건 제외
     if (!it.one && it.month <= m) recur += it.amount
     else if (it.one && it.month === m) onet += it.amount
   }
-  return baseline6 + recur + onet
+  return baseline + recur + onet
 }
 
-// 라인/그룹의 월별 {plan, val, conf}
-function lineMonths(plan, items, keys, subkeyOrGroup, byGroup) {
-  const base6 = sumA(plan, keys, 6)
+// 라인/그룹의 월별 {plan, val, conf}  — lastConf 이하는 확정(실적), 초과는 예상(파이프라인)
+function lineMonths(plan, items, keys, subkeyOrGroup, byGroup, lastConf) {
+  const base = sumA(plan, keys, lastConf)
   const match = byGroup ? (it) => it.group === subkeyOrGroup : (it) => it.subkey === subkeyOrGroup
   const months = {}
   for (const m of MONTHS) {
-    if (m <= 6) months[m] = { plan: round1(sumP(plan, keys, m)), val: round1(sumA(plan, keys, m)), conf: true }
-    else        months[m] = { plan: round1(sumP(plan, keys, m)), val: round1(forecast(items, match, base6, m)), conf: false }
+    if (m <= lastConf) months[m] = { plan: round1(sumP(plan, keys, m)), val: round1(sumA(plan, keys, m)), conf: true }
+    else               months[m] = { plan: round1(sumP(plan, keys, m)), val: round1(forecast(items, match, base, m, lastConf)), conf: false }
   }
   return months
 }
 
-// 합산 그룹(주요매출/엔터1,2): 확정 1~6은 plan-key 실적, 예상 7~12는 하위 그룹 예상 합
-function rollupMonths(plan, planKey, fcGroups, fcByMonth) {
+// 합산 그룹(주요매출/엔터1,2)
+function rollupMonths(plan, planKey, fcGroups, fcByMonth, lastConf) {
   const months = {}
   for (const m of MONTHS) {
     const planV = round1(P(plan, planKey, m))
-    if (m <= 6) months[m] = { plan: planV, val: round1(A(plan, planKey, m)), conf: true }
-    else        months[m] = { plan: planV, val: round1(fcGroups.reduce((s, g) => s + fcByMonth[g][m], 0)), conf: false }
+    if (m <= lastConf) months[m] = { plan: planV, val: round1(A(plan, planKey, m)), conf: true }
+    else               months[m] = { plan: planV, val: round1(fcGroups.reduce((s, g) => s + fcByMonth[g][m], 0)), conf: false }
   }
   return months
 }
@@ -114,23 +114,27 @@ function rollupMonths(plan, planKey, fcGroups, fcByMonth) {
 export function buildModel(plan, pipes, ebit) {
   const items = flatItems(pipes)
 
+  // 마지막 확정월 = 주요매출 실적이 채워진 가장 큰 월 (7월 실적 채워지면 자동 7로 넘어감)
+  let lastConf = 0
+  for (const m of MONTHS) if (A(plan, '주요매출', m) > 0) lastConf = m
+
   // 그룹별 예상(월별) 미리 계산
   const fcByMonth = {}
   for (const g of ['글로벌', '기업', '엔터3']) {
-    const base6 = A(plan, GROUP_KEY[g], 6)
+    const base = A(plan, GROUP_KEY[g], lastConf)
     fcByMonth[g] = {}
-    for (const m of MONTHS) fcByMonth[g][m] = m <= 6 ? A(plan, GROUP_KEY[g], m) : forecast(items, (it) => it.group === g, base6, m)
+    for (const m of MONTHS) fcByMonth[g][m] = m <= lastConf ? A(plan, GROUP_KEY[g], m) : forecast(items, (it) => it.group === g, base, m, lastConf)
   }
 
   const groupRow = (label, level, planKey, group) => ({
     label, level,
-    months: lineMonths(plan, items, [planKey], group, true),
-    kids: LINE_DEF[group].map((ln) => ({ label: ln.label, level: 3, months: lineMonths(plan, items, ln.keys, ln.subkey, false) })),
+    months: lineMonths(plan, items, [planKey], group, true, lastConf),
+    kids: LINE_DEF[group].map((ln) => ({ label: ln.label, level: 3, months: lineMonths(plan, items, ln.keys, ln.subkey, false, lastConf) })),
   })
 
   const rows = [
-    { label: '주요매출',           level: 0, months: rollupMonths(plan, '주요매출', ['글로벌','기업','엔터3'], fcByMonth) },
-    { label: '엔터프라이즈 1,2그룹', level: 1, months: rollupMonths(plan, '엔터12', ['글로벌','기업'], fcByMonth) },
+    { label: '주요매출',           level: 0, months: rollupMonths(plan, '주요매출', ['글로벌','기업','엔터3'], fcByMonth, lastConf) },
+    { label: '엔터프라이즈 1,2그룹', level: 1, months: rollupMonths(plan, '엔터12', ['글로벌','기업'], fcByMonth, lastConf) },
     groupRow('글로벌', 2, '글로벌', '글로벌'),
     groupRow('기업',   2, '기업',   '기업'),
     groupRow('엔터프라이즈 3그룹', 1, '엔터3', '엔터3'),
@@ -140,7 +144,7 @@ export function buildModel(plan, pipes, ebit) {
   const ebitSrc = (ebit && ebit.lines && ebit.lines.ebit_all) ? ebit : plan
   const ebitRow = (label, level, key) => ({
     label, level,
-    months: Object.fromEntries(MONTHS.map((m) => [m, { plan: round1(P(ebitSrc, key, m)), val: round1(A(ebitSrc, key, m)), conf: m <= 6 }])),
+    months: Object.fromEntries(MONTHS.map((m) => [m, { plan: round1(P(ebitSrc, key, m)), val: round1(A(ebitSrc, key, m)), conf: m <= lastConf }])),
   })
   const ebitRows = [
     ebitRow('합계', 0, 'ebit_all'),
@@ -148,5 +152,5 @@ export function buildModel(plan, pipes, ebit) {
     ebitRow('엔터프라이즈 3그룹', 1, 'ebit_3'),
   ]
 
-  return { rows, ebit: ebitRows }
+  return { rows, ebit: ebitRows, lastConf }
 }
