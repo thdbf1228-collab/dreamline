@@ -159,7 +159,7 @@ export default function Revenue() {
       <div className="flex gap-1 border-b-2 border-line mt-4">
         {CATS.map((t) => (
           <button key={t.c} onClick={() => setCat(t.c)} className="px-4 py-2.5 text-sm font-semibold -mb-0.5 border-b-2"
-            style={cat === t.c ? { color: BRAND, borderColor: BRAND } : { color: '#94A3B8', borderColor: 'transparent' }}>{t.label}</button>
+            style={cat === t.c ? { color: BRAND, borderColor: BRAND } : { color: '#475569', borderColor: 'transparent' }}>{t.label}</button>
         ))}
       </div>
 

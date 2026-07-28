@@ -57,7 +57,7 @@ function parsePipeSheet(sheet, hasSub) {
       const amtCell = sheet[map.증감 + r]
       if (!amtCell || amtCell.v === '' || amtCell.v == null) continue
       const amount = typeof amtCell.v === 'number' ? amtCell.v : Number(String(amtCell.v).replace(/,/g, ''))
-      if (!isFinite(amount)) continue
+      if (!isFinite(amount) || amount === 0) continue   // 증감액 0(=기입용 빈 템플릿 행)은 제외
       const prob = num(sheet, map.확률 + r)
       items.push({
         side, 월: m,

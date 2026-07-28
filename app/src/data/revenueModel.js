@@ -27,7 +27,7 @@ export function subkeyFor(group, product, sub, one) {
     return group + '_전용'                            // DCI·전용 등
   }
   // 엔터3
-  if (one) return '엔터3_코로상면'                    // 3그룹 1회성/NI → 코로케이션(상면)
+  if (one) return '엔터3_NI'                          // 3그룹 1회성/NI → NI성(별도 라인)
   const p = String(product || '')
   if (p.includes('상면')) return '엔터3_코로상면'
   if (p.includes('전력')) return '엔터3_코로전력'
@@ -48,8 +48,9 @@ const LINE_DEF = {
   엔터3: [
     { label: '전용회선',        keys: ['엔터3_전용'],               subkey: '엔터3_전용' },
     { label: '인터넷전용회선',   keys: ['엔터3_인터넷'],             subkey: '엔터3_인터넷' },
-    { label: '코로케이션(상면)', keys: ['엔터3_코로상면', '엔터3_상면매출', '엔터3_NI'], subkey: '엔터3_코로상면' },
+    { label: '코로케이션(상면)', keys: ['엔터3_코로상면', '엔터3_상면매출'], subkey: '엔터3_코로상면' },
     { label: '코로케이션(전력)', keys: ['엔터3_코로전력'],           subkey: '엔터3_코로전력' },
+    { label: 'NI성',            keys: ['엔터3_NI'],                subkey: '엔터3_NI' },
   ],
 }
 const GROUP_KEY = { 글로벌: '글로벌', 기업: '기업', 엔터3: '엔터3' }
