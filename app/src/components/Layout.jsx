@@ -8,7 +8,6 @@ const NAV = [
   { to: '/accounts', label: '파이프라인', icon: '🧩' },
   { to: '/contracts', label: '계약', icon: '📝' },
   { to: '/activity', label: '활동', icon: '📞' },
-  { to: '/revenue', label: '매출현황', icon: '📈' },
 ]
 
 // 섹션 소제목 + 얇은 구분선
@@ -27,7 +26,7 @@ export default function Layout({ children }) {
   const logout = async () => { await signOut(); nav('/') }
   const notice = useNotice()
   const loc = useLocation()
-  const showNotice = notice && !['/contracts', '/activity'].includes(loc.pathname)
+  const showNotice = notice && !['/contracts', '/activity', '/revenue'].includes(loc.pathname)
 
   const sideClass = ({ isActive }) =>
     ['block rounded-lg px-3 py-2 text-sm font-medium transition-colors',
@@ -71,6 +70,13 @@ export default function Layout({ children }) {
               <span className="text-[11px] text-ink-300">↗</span>
             </a>
           </div>
+
+          <SectionLabel>실적</SectionLabel>
+          <div className="space-y-1">
+            <NavLink to="/revenue" className={sideClass}>
+              <span className="mr-1.5 text-[11px]">📈</span>매출현황
+            </NavLink>
+          </div>
         </nav>
       </aside>
 
@@ -94,6 +100,9 @@ export default function Layout({ children }) {
             className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-600">
             <span className="mr-1 text-[10px]">🔑</span>키맨
           </a>
+          <NavLink to="/revenue" className={pillClass}>
+            <span className="mr-1 text-[10px]">📈</span>매출현황
+          </NavLink>
         </nav>
       </header>
 
