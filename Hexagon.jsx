@@ -3,12 +3,23 @@ import { useAuth } from '../auth/AuthProvider'
 import { useNotice } from '../data/useNotice'
 
 const NAV = [
-  { to: '/', label: '전체', end: true },
-  { to: '/weekly', label: '주간현황' },
-  { to: '/accounts', label: '파이프라인' },
-  { to: '/contracts', label: '계약' },
-  { to: '/activity', label: '활동' },
+  { to: '/', label: '전체', icon: '📊', end: true },
+  { to: '/weekly', label: '주간현황', icon: '📅', badge: 'NEW' },
+  { to: '/accounts', label: '파이프라인', icon: '🧩' },
+  { to: '/contracts', label: '계약', icon: '📝' },
+  { to: '/activity', label: '활동', icon: '📞' },
+  { to: '/revenue', label: '매출현황', icon: '📈' },
 ]
+
+// 섹션 소제목 + 얇은 구분선
+function SectionLabel({ children }) {
+  return (
+    <div className="flex items-center gap-2 px-3 pb-1.5 pt-3">
+      <span className="text-[9px] font-semibold tracking-[0.1em] text-ink-400">{children}</span>
+      <span className="h-px flex-1 bg-line" />
+    </div>
+  )
+}
 
 export default function Layout({ children }) {
   const { session, isAdmin, signOut } = useAuth()
@@ -40,12 +51,26 @@ export default function Layout({ children }) {
             <button onClick={logout} className="w-full rounded-lg border border-line px-3 py-1.5 text-sm text-ink-700 hover:bg-canvas">로그아웃</button>
           </div>
         )}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {NAV.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>{n.label}</NavLink>)}
-          {isAdmin && (<>
-            <div className="pt-3 mt-2 border-t border-line" />
-            <NavLink to="/admin" className={sideClass}>관리자</NavLink>
-          </>)}
+        <nav className="flex-1 p-3 overflow-y-auto">
+          <SectionLabel>CRM</SectionLabel>
+          <div className="space-y-1">
+            {NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} end={n.end} className={sideClass}>
+                <span className="mr-1.5 text-[11px]">{n.icon}</span>{n.label}
+                {n.badge && <span className="ml-1.5 rounded bg-lost/55 px-1 py-px text-[8px] font-bold text-white align-middle badge-pulse">{n.badge}</span>}
+              </NavLink>
+            ))}
+            {isAdmin && <NavLink to="/admin" className={sideClass}><span className="mr-1.5 text-[11px]">⚙️</span>관리자</NavLink>}
+          </div>
+
+          <SectionLabel>바로가기</SectionLabel>
+          <div className="space-y-1">
+            <a href="https://dreamline-sales.vercel.app/" target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-ink-500 transition-colors hover:bg-canvas hover:text-ink-900">
+              <span><span className="mr-1.5 text-[11px]">🔑</span>키맨</span>
+              <span className="text-[11px] text-ink-300">↗</span>
+            </a>
+          </div>
         </nav>
       </aside>
 
@@ -59,14 +84,23 @@ export default function Layout({ children }) {
           {session && <button onClick={logout} className="shrink-0 rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink-600">로그아웃</button>}
         </div>
         <nav className="flex gap-1.5 overflow-x-auto px-3 pb-2">
-          {items.map((n) => <NavLink key={n.to} to={n.to} end={n.end} className={pillClass}>{n.label}</NavLink>)}
+          {items.map((n) => (
+            <NavLink key={n.to} to={n.to} end={n.end} className={pillClass}>
+              {n.icon && <span className="mr-1 text-[10px]">{n.icon}</span>}{n.label}
+              {n.badge && <span className="ml-1 rounded bg-lost/55 px-1 text-[9px] font-bold text-white badge-pulse">{n.badge}</span>}
+            </NavLink>
+          ))}
+          <a href="https://dreamline-sales.vercel.app/" target="_blank" rel="noopener noreferrer"
+            className="shrink-0 whitespace-nowrap rounded-lg border border-line bg-paper px-3 py-1.5 text-sm font-medium text-ink-600">
+            <span className="mr-1 text-[10px]">🔑</span>키맨
+          </a>
         </nav>
       </header>
 
       <main className="flex-1 min-w-0">
         <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 md:py-8 overflow-x-hidden">
           {showNotice && (
-            <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 whitespace-pre-wrap">
+            <div className="notice-flash mb-5 rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900 whitespace-pre-wrap">
               <span className="mr-2 font-bold">📢 공지</span>{notice}
             </div>
           )}

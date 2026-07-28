@@ -1,205 +1,138 @@
+// 매출현황 엑셀(매출현황양식.xlsx) 업로드 파서 + Supabase 저장
+// 워크북 1개에 시트 4개: '매출달성계획' + '1그룹' + '2그룹' + '3그룹'
 import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
-import { parseNum, parseInt0, parseDate } from './format'
 
-// 엑셀 -> 헤더 기반 행 객체 배열
-async function readRows(file) {
+const num = (sheet, addr) => {
+  const c = sheet[addr]
+  return c && typeof c.v === 'number' ? c.v : (c && c.v !== undefined && c.v !== '' ? (Number(String(c.v).replace(/,/g, '')) || 0) : 0)
+}
+const str = (sheet, addr) => {
+  const c = sheet[addr]
+  return c && c.v != null ? String(c.v).trim() : ''
+}
+
+// ── 매출달성계획 시트 파싱 (고정 행/열 = 매출현황양식.xlsx 레이아웃) ──
+const PLAN_ROWS = {
+  주요매출: 5, 엔터12: 7,
+  글로벌: 9, 글로벌_전용: 10, 글로벌_인터넷: 11, 글로벌_NI: 12,
+  기업: 13, 기업_전용: 14, 기업_인터넷: 15, 기업_NI: 16,
+  엔터3: 17, 엔터3_전용: 19, 엔터3_인터넷: 20, 엔터3_상면매출: 21,
+  엔터3_코로상면: 22, 엔터3_코로전력: 23, 엔터3_NI: 24,
+  ebit_all: 6, ebit_12: 8, ebit_3: 18,
+}
+const PLAN_COL = { plan: ['F','H','J','L','N','P','R','T','V','X','Z','AB'], actual: ['G','I','K','M','O','Q','S','U','W','Y','AA','AC'] }
+
+function parsePlan(sheet) {
+  const lines = {}
+  for (const [key, row] of Object.entries(PLAN_ROWS)) {
+    lines[key] = {
+      plan:   PLAN_COL.plan.map((c) => num(sheet, c + row)),
+      actual: PLAN_COL.actual.map((c) => num(sheet, c + row)),
+    }
+  }
+  return { lines }
+}
+
+const monthNum = (v) => { const m = String(v || '').trim().match(/(\d+)\s*월/); return m ? Number(m[1]) : null }
+
+// ── 파이프라인 시트 파싱 (증가 좌측 / 감소 우측 두 블록) ──
+// 1/2그룹: inc A,B,C,D,E,F,G,H,I,J  dec L,M,N,O,P,Q,R,S,T,U   (세부 있음)
+// 3그룹  : inc A,B, ,C,D,E,F,G,H,I   dec K,L, ,M,N,O,P,Q,R,S    (세부 없음)
+function parsePipeSheet(sheet, hasSub) {
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1')
+  const maxRow = range.e.r + 1
+  const items = []
+  const inc = hasSub
+    ? { 월:'A',상품:'B',세부:'C',구분:'D',담당:'E',고객사:'F',내용:'G',증감:'H',성격:'I',확률:'J' }
+    : { 월:'A',상품:'B',세부:null,구분:'C',담당:'D',고객사:'E',내용:'F',증감:'G',성격:'H',확률:'I' }
+  const dec = hasSub
+    ? { 월:'L',상품:'M',세부:'N',구분:'O',담당:'P',고객사:'Q',내용:'R',증감:'S',성격:'T',확률:'U' }
+    : { 월:'K',상품:'L',세부:null,구분:'M',담당:'N',고객사:'O',내용:'P',증감:'Q',성격:'R',확률:'S' }
+
+  const read = (map, side) => {
+    for (let r = 2; r <= maxRow; r++) {
+      const m = monthNum(str(sheet, map.월 + r))
+      if (!m) continue
+      const amtCell = sheet[map.증감 + r]
+      if (!amtCell || amtCell.v === '' || amtCell.v == null) continue
+      const amount = typeof amtCell.v === 'number' ? amtCell.v : Number(String(amtCell.v).replace(/,/g, ''))
+      if (!isFinite(amount)) continue
+      const prob = num(sheet, map.확률 + r)
+      items.push({
+        side, 월: m,
+        상품: str(sheet, map.상품 + r),
+        세부: map.세부 ? str(sheet, map.세부 + r) : '',
+        구분: str(sheet, map.구분 + r),
+        담당: str(sheet, map.담당 + r),
+        고객사: str(sheet, map.고객사 + r),
+        내용: str(sheet, map.내용 + r),
+        증감액: Math.round(amount * 100) / 100,
+        성격: str(sheet, map.성격 + r),
+        확률: Math.round(prob),
+        반영: prob >= 50,
+      })
+    }
+  }
+  read(inc, '증가')
+  read(dec, '감소')
+  return items
+}
+
+// ── 파일 ① 매출데이터: 워크북(매출달성계획 + 1/2/3그룹) → { plan, pipes } 저장 ──
+export async function ingestRevenueWorkbook(file, log = () => {}) {
   const buf = await file.arrayBuffer()
   const wb = XLSX.read(buf, { type: 'array' })
-  const ws = wb.Sheets[wb.SheetNames[0]]
-  const raw = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true })
-  // 헤더 앞뒤 공백/개행 제거 — '활동내용 ' 처럼 공백이 섞여도 읽히도록
-  return raw.map((r) => {
-    const o = {}
-    for (const k of Object.keys(r)) o[String(k).replace(/\s+/g, ' ').trim()] = r[k]
-    return o
-  })
-}
 
-function uniqBy(arr, key) {
-  const m = new Map()
-  for (const x of arr) if (!m.has(x[key])) m.set(x[key], x)
-  return [...m.values()]
-}
+  const planSheet = wb.Sheets['매출달성계획']
+  if (!planSheet) throw new Error("'매출달성계획' 시트를 찾을 수 없습니다.")
+  const plan = parsePlan(planSheet)
+  log('매출달성계획 파싱 완료 (계획·확정실적)')
 
-// ── 영업기회 적재 ──────────────────────────────────────────
-export async function ingestOpportunities(file, log = () => {}, replace = false) {
-  const rows = (await readRows(file)).filter((r) => r['영업기회ID'] !== '')
-  if (replace && rows.length === 0) throw new Error('영업기회 파일에 데이터가 없어 전체 교체를 중단했습니다.')
-  log(`영업기회 ${rows.length}행 읽음`)
-
-  // 1) 거래처(고객사) upsert
-  const accounts = uniqBy(
-    rows
-      .filter((r) => r['고객사ID'] !== '')
-      .map((r) => ({ external_id: parseInt0(r['고객사ID']), name: String(r['고객사']).trim() })),
-    'external_id'
-  )
-  if (accounts.length) {
-    const { error } = await supabase.from('accounts').upsert(accounts, { onConflict: 'external_id' })
-    if (error) throw new Error('거래처 upsert 실패: ' + error.message)
-  }
-  log(`거래처 ${accounts.length}개 반영`)
-
-  // 2) 담당자 — 없는 이름만 추가(기존 그룹배정 보존)
-  const repNames = [...new Set(rows.map((r) => String(r['담당자']).trim()).filter(Boolean))]
-  const { data: existingReps } = await supabase.from('reps').select('id,name,group_id')
-  const haveNames = new Set((existingReps || []).map((r) => r.name))
-  const newReps = repNames.filter((n) => !haveNames.has(n)).map((name) => ({ name }))
-  if (newReps.length) {
-    const { error } = await supabase.from('reps').insert(newReps)
-    if (error) throw new Error('담당자 추가 실패: ' + error.message)
-    log(`담당자 ${newReps.length}명 신규 추가(그룹 미배정)`)
+  const pipes = {}
+  for (const name of ['1그룹', '2그룹', '3그룹']) {
+    const sh = wb.Sheets[name]
+    if (!sh) { log(`⚠ '${name}' 시트 없음 — 건너뜀`); pipes[name] = []; continue }
+    pipes[name] = parsePipeSheet(sh, name !== '3그룹')
+    log(`${name} 파이프라인 ${pipes[name].length}건 (반영 ${pipes[name].filter((x) => x.반영).length})`)
   }
 
-  // 3) 매핑 테이블 재조회
-  const [{ data: accs }, { data: reps }, { data: stages }] = await Promise.all([
-    supabase.from('accounts').select('id,external_id'),
-    supabase.from('reps').select('id,name,group_id'),
-    supabase.from('pipeline_stages').select('id,label'),
-  ])
-  const accMap = new Map((accs || []).map((a) => [a.external_id, a.id]))
-  const repMap = new Map((reps || []).map((r) => [r.name, r]))
-  const stageMap = new Map((stages || []).map((s) => [s.label, s.id]))
+  const { data: u } = await supabase.auth.getUser()
+  // plan/pipes 만 갱신 — ebit 컬럼은 건드리지 않음
+  const { error } = await supabase.from('revenue_data')
+    .upsert({ id: 1, plan, pipes, updated_at: new Date().toISOString(), updated_by: u?.user?.email || null }, { onConflict: 'id' })
+  if (error) throw new Error('저장 실패: ' + error.message)
+  log('Supabase 저장 완료')
+  return { pipes: Object.fromEntries(Object.entries(pipes).map(([k, v]) => [k, v.length])) }
+}
 
-  // 4) 영업기회 행 구성
-  const opps = rows.map((r) => {
-    const rep = repMap.get(String(r['담당자']).trim())
-    return {
-      external_id: parseInt0(r['영업기회ID']),
-      title: String(r['영업기회'] || '').trim(),
-      account_id: accMap.get(parseInt0(r['고객사ID'])) || null,
-      rep_id: rep?.id || null,
-      group_id: rep?.group_id || null,
-      stage_id: stageMap.get(String(r['단계']).trim()) || null,
-      status: String(r['진행상태'] || '').trim() || null,
-      est_amount: parseNum(r['예상매출']),
-      win_prob: parseInt0(r['성공확률(%)']),
-      product: String(r['제품'] || '').trim() || null,
-      sales_type: String(r['매출구분'] || '').trim() || null,
-      lost_reason: String(r['실패구분'] || '').trim() || null,
-      channel: String(r['인지경로'] || '').trim() || null,
-      note: String(r['비고'] || '').trim() || null,
-      start_date: parseDate(r['시작일']),
-      end_date: parseDate(r['종료일']),
-      registered_at: parseDate(r['등록일']),
-      changed_at: parseDate(r['변경일']) ? parseDate(r['변경일']) + 'T00:00:00Z' : null,
+// ── 파일 ② 에비타(공헌이익2): 별도 파일 → { ebit } 저장 ──
+// 형식: 매출달성계획과 동일 양식 시트 (합계=6행, 엔터1,2=8행, 엔터3=18행, 월별 계획/실적 열 동일).
+// (실제 EBITDA 파일 레이아웃이 다르면 EBIT_ROWS 3줄만 맞추면 됩니다.)
+const EBIT_ROWS = { ebit_all: 6, ebit_12: 8, ebit_3: 18 }
+const EBIT_SHEET_CANDIDATES = ['매출달성계획', '공헌이익2', '공헌이익', '공헌이익2EBITDA', 'EBITDA']
+
+export async function ingestEbitda(file, log = () => {}) {
+  const buf = await file.arrayBuffer()
+  const wb = XLSX.read(buf, { type: 'array' })
+  const name = EBIT_SHEET_CANDIDATES.find((n) => wb.Sheets[n]) || wb.SheetNames[0]
+  const sheet = wb.Sheets[name]
+  if (!sheet) throw new Error('EBITDA 시트를 찾을 수 없습니다.')
+  log(`EBITDA 시트: '${name}'`)
+
+  const lines = {}
+  for (const [key, row] of Object.entries(EBIT_ROWS)) {
+    lines[key] = {
+      plan:   PLAN_COL.plan.map((c) => num(sheet, c + row)),
+      actual: PLAN_COL.actual.map((c) => num(sheet, c + row)),
     }
-  })
-
-  if (replace) { const { error: de } = await supabase.from('opportunities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업기회 삭제 실패: ' + de.message); log('기존 영업기회 전체 삭제 후 교체') }
-  const { error } = await supabase.from('opportunities').upsert(opps, { onConflict: 'external_id' })
-  if (error) throw new Error('영업기회 upsert 실패: ' + error.message)
-  log(`영업기회 ${opps.length}건 반영 완료`)
-  return { accounts: accounts.length, reps: newReps.length, opportunities: opps.length }
-}
-
-// ── 계약 적재 (영업기회에 없는 건은 버림) ──────────────────
-export async function ingestContracts(file, log = () => {}, replace = false) {
-  const rows = (await readRows(file)).filter((r) => r['계약ID'] !== '')
-  if (replace && rows.length === 0) throw new Error('계약 파일에 데이터가 없어 전체 교체를 중단했습니다.')
-  log(`계약 ${rows.length}행 읽음`)
-
-  // 기준: 현재 영업기회 external_id 집합
-  const { data: opps } = await supabase.from('opportunities').select('external_id')
-  const validOpp = new Set((opps || []).map((o) => o.external_id))
-
-  const [{ data: accs }, { data: reps }] = await Promise.all([
-    supabase.from('accounts').select('id,external_id'),
-    supabase.from('reps').select('id,name'),
-  ])
-  const accMap = new Map((accs || []).map((a) => [a.external_id, a.id]))
-  const repMap = new Map((reps || []).map((r) => [r.name, r.id]))
-
-  let dropped = 0
-  const contracts = []
-  for (const r of rows) {
-    const oppId = parseInt0(r['영업기회ID'])
-    if (!r['영업기회ID'] || !validOpp.has(oppId)) {
-      dropped++
-      continue // 고아 계약 제외
-    }
-    contracts.push({
-      external_id: parseInt0(r['계약ID']),
-      opportunity_external_id: oppId,
-      title: String(r['계약명'] || '').trim(),
-      account_id: accMap.get(parseInt0(r['고객사ID'])) || null,
-      rep_id: repMap.get(String(r['담당자']).trim()) || null,
-      supply_amount: parseNum(r['공급가액']),
-      tax_amount: parseNum(r['세액']),
-      total_amount: parseNum(r['합계금액']),
-      product: String(r['연관제품'] || '').trim() || null,
-      line_count: parseInt0(r['회선수']),
-      contract_type: String(r['계약구분'] || '').trim() || null,
-      related_product: String(r['연관제품'] || '').trim() || null,
-      contract_date: parseDate(r['계약일']),
-      start_date: parseDate(r['시작일']),
-      end_date: parseDate(r['종료일']),
-      renewal_date: parseDate(r['갱신예정일']),
-      note: String(r['비고'] || '').trim() || null,
-    })
   }
+  const ebit = { lines }
 
-  if (contracts.length) {
-    if (replace) { const { error: de } = await supabase.from('contracts').delete().not('id', 'is', null); if (de) throw new Error('기존 계약 삭제 실패: ' + de.message); log('기존 계약 전체 삭제 후 교체') }
-    const { error } = await supabase.from('contracts').upsert(contracts, { onConflict: 'external_id' })
-    if (error) throw new Error('계약 upsert 실패: ' + error.message)
-  }
-  log(`계약 ${contracts.length}건 반영, 영업기회 없는 ${dropped}건 제외`)
-  return { contracts: contracts.length, dropped }
-}
-
-// ── 영업활동 적재 ──────────────────────────────────────────
-export async function ingestActivities(file, log = () => {}, replace = false) {
-  const rows = (await readRows(file)).filter((r) => r['영업활동ID'] !== '')
-  if (replace && rows.length === 0) throw new Error('영업활동 파일에 데이터가 없어 전체 교체를 중단했습니다.')
-  log(`영업활동 ${rows.length}행 읽음`)
-
-  // 담당자 — 없는 이름만 추가(기존 그룹배정 보존)
-  const repNames = [...new Set(rows.map((r) => String(r['담당자']).trim()).filter(Boolean))]
-  const { data: existingReps } = await supabase.from('reps').select('id,name')
-  const have = new Set((existingReps || []).map((r) => r.name))
-  const newReps = repNames.filter((n) => !have.has(n)).map((name) => ({ name }))
-  if (newReps.length) {
-    const { error } = await supabase.from('reps').insert(newReps)
-    if (error) throw new Error('담당자 추가 실패: ' + error.message)
-    log(`담당자 ${newReps.length}명 신규 추가(그룹 미배정)`)
-  }
-  const { data: reps } = await supabase.from('reps').select('id,name')
-  const repMap = new Map((reps || []).map((r) => [r.name, r.id]))
-
-  const acts = rows.map((r) => {
-    let type = String(r['활동분류'] || '').trim()
-    if (!type || type.startsWith('선택하세요')) type = '미분류'
-    return {
-      external_id: parseInt0(r['영업활동ID']),
-      rep_id: repMap.get(String(r['담당자']).trim()) || null,
-      account_external_id: parseInt0(r['고객사ID']) || null,
-      account_name: String(r['고객사'] || '').trim() || null,
-      opportunity_external_id: parseInt0(r['영업기회ID']) || null,
-      activity_type: type,
-      activity_purpose: String(r['활동목적'] || '').trim() || null,
-      activity_content: String(r['활동내용'] || '').trim() || null,
-      plan_content: String(r['계획내용'] || '').trim() || null,
-      start_time: String(r['활동시작시간'] || '').trim() || null,
-      end_time: String(r['활동종료시간'] || '').trim() || null,
-      opportunity_title: String(r['영업기회'] || '').trim() || null,
-      related_product: String(r['연관제품'] || '').trim() || null,
-      companion: String(r['동반'] || '').trim() || null,
-      participants: String(r['참가자'] || '').trim() || null,
-      customer_name: String(r['고객'] || '').trim() || null,
-      registered_by: String(r['등록자'] || '').trim() || null,
-      registered_at: parseDate(r['등록일']),
-      activity_date: parseDate(r['활동일시']),
-    }
-  })
-
-  const filledContent = acts.filter((a) => a.activity_content).length
-  log(`활동내용 읽힘: ${filledContent}/${acts.length}건` + (filledContent === 0 ? ' ⚠ 엑셀에 활동내용 열이 없거나 이름이 다릅니다' : ''))
-
-  if (replace) { const { error: de } = await supabase.from('activities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업활동 삭제 실패: ' + de.message); log('기존 영업활동 전체 삭제 후 교체') }
-  const { error } = await supabase.from('activities').upsert(acts, { onConflict: 'external_id' })
-  if (error) throw new Error('영업활동 upsert 실패: ' + error.message)
-  log(`영업활동 ${acts.length}건 반영 완료`)
-  return { activities: acts.length, reps: newReps.length }
+  const { data: u } = await supabase.auth.getUser()
+  const { error } = await supabase.from('revenue_data')
+    .upsert({ id: 1, ebit, updated_at: new Date().toISOString(), updated_by: u?.user?.email || null }, { onConflict: 'id' })
+  if (error) throw new Error('저장 실패: ' + error.message)
+  log('EBITDA 저장 완료')
+  return { ok: true }
 }

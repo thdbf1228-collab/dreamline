@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react'
-import { fetchAll } from '../lib/fetchAll'
-export function useActivities() {
-  const [rows, setRows] = useState([])
-  useEffect(() => { fetchAll('v_activities').then(({ data }) => setRows(data || [])) }, [])
-  return { rows }
-}
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+)

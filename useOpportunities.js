@@ -58,3 +58,14 @@ body {
 .drill-scroll::-webkit-scrollbar-track { background: #EEF1F6; border-radius: 8px; }
 .drill-scroll::-webkit-scrollbar-thumb { background: #9AA6B8; border-radius: 8px; border: 3px solid #EEF1F6; }
 .drill-scroll::-webkit-scrollbar-thumb:hover { background: #6B7A90; }
+
+/* 신설 메뉴 NEW 뱃지 깜빡 */
+@keyframes badgePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.badge-pulse { animation: badgePulse 1.3s ease-in-out infinite; }
+
+/* 공지 배너 강조 — 은은한 글로우 깜빡 */
+@keyframes noticeFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); border-color: #FBBF24; }
+  50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.28); border-color: #F59E0B; }
+}
+.notice-flash { animation: noticeFlash 1.8s ease-in-out infinite; }

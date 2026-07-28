@@ -1,109 +1,205 @@
-// v_opportunities 행들로부터 대시보드 집계 파생
-// 모든 금액은 display_amount(천원) 기준.
+import * as XLSX from 'xlsx'
+import { supabase } from './supabase'
+import { parseNum, parseInt0, parseDate } from './format'
 
-const OPEN = '진행중'
-const WON = '종료(성공)'
-const LOST = '종료(실패)'
-
-export const STAGES = [
-  { id: 1, label: '기회인지' },
-  { id: 2, label: '제안' },
-  { id: 3, label: '견적' },
-  { id: 4, label: '계약' },
-  { id: 5, label: '개통완료' },
-]
-
-const amt = (r) => Number(r.display_amount) || 0
-
-export function kpis(rows) {
-  const open = rows.filter((r) => r.status === OPEN)
-  const won = rows.filter((r) => r.status === WON)
-  const lost = rows.filter((r) => r.status === LOST)
-  const decided = won.length + lost.length
-  return {
-    total: rows.length,
-    pipelineAmount: open.reduce((s, r) => s + amt(r), 0),
-    pipelineCount: open.length,
-    confirmedAmount: won.reduce((s, r) => s + amt(r), 0),
-    wonCount: won.length,
-    lostCount: lost.length,
-    winRate: decided ? (won.length / decided) * 100 : 0,
-    staleCount: rows.filter((r) => r.is_stale).length,
-  }
+// 엑셀 -> 헤더 기반 행 객체 배열
+async function readRows(file) {
+  const buf = await file.arrayBuffer()
+  const wb = XLSX.read(buf, { type: 'array' })
+  const ws = wb.Sheets[wb.SheetNames[0]]
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: '', raw: true })
+  // 헤더 앞뒤 공백/개행 제거 — '활동내용 ' 처럼 공백이 섞여도 읽히도록
+  return raw.map((r) => {
+    const o = {}
+    for (const k of Object.keys(r)) o[String(k).replace(/\s+/g, ' ').trim()] = r[k]
+    return o
+  })
 }
 
-export function funnel(rows) {
-  return STAGES.map((s) => {
-    const inStage = rows.filter((r) => r.stage_id === s.id)
+function uniqBy(arr, key) {
+  const m = new Map()
+  for (const x of arr) if (!m.has(x[key])) m.set(x[key], x)
+  return [...m.values()]
+}
+
+// ── 영업기회 적재 ──────────────────────────────────────────
+export async function ingestOpportunities(file, log = () => {}, replace = false) {
+  const rows = (await readRows(file)).filter((r) => r['영업기회ID'] !== '')
+  if (replace && rows.length === 0) throw new Error('영업기회 파일에 데이터가 없어 전체 교체를 중단했습니다.')
+  log(`영업기회 ${rows.length}행 읽음`)
+
+  // 1) 거래처(고객사) upsert
+  const accounts = uniqBy(
+    rows
+      .filter((r) => r['고객사ID'] !== '')
+      .map((r) => ({ external_id: parseInt0(r['고객사ID']), name: String(r['고객사']).trim() })),
+    'external_id'
+  )
+  if (accounts.length) {
+    const { error } = await supabase.from('accounts').upsert(accounts, { onConflict: 'external_id' })
+    if (error) throw new Error('거래처 upsert 실패: ' + error.message)
+  }
+  log(`거래처 ${accounts.length}개 반영`)
+
+  // 2) 담당자 — 없는 이름만 추가(기존 그룹배정 보존)
+  const repNames = [...new Set(rows.map((r) => String(r['담당자']).trim()).filter(Boolean))]
+  const { data: existingReps } = await supabase.from('reps').select('id,name,group_id')
+  const haveNames = new Set((existingReps || []).map((r) => r.name))
+  const newReps = repNames.filter((n) => !haveNames.has(n)).map((name) => ({ name }))
+  if (newReps.length) {
+    const { error } = await supabase.from('reps').insert(newReps)
+    if (error) throw new Error('담당자 추가 실패: ' + error.message)
+    log(`담당자 ${newReps.length}명 신규 추가(그룹 미배정)`)
+  }
+
+  // 3) 매핑 테이블 재조회
+  const [{ data: accs }, { data: reps }, { data: stages }] = await Promise.all([
+    supabase.from('accounts').select('id,external_id'),
+    supabase.from('reps').select('id,name,group_id'),
+    supabase.from('pipeline_stages').select('id,label'),
+  ])
+  const accMap = new Map((accs || []).map((a) => [a.external_id, a.id]))
+  const repMap = new Map((reps || []).map((r) => [r.name, r]))
+  const stageMap = new Map((stages || []).map((s) => [s.label, s.id]))
+
+  // 4) 영업기회 행 구성
+  const opps = rows.map((r) => {
+    const rep = repMap.get(String(r['담당자']).trim())
     return {
-      ...s,
-      count: inStage.length,
-      amount: inStage.reduce((acc, r) => acc + amt(r), 0),
+      external_id: parseInt0(r['영업기회ID']),
+      title: String(r['영업기회'] || '').trim(),
+      account_id: accMap.get(parseInt0(r['고객사ID'])) || null,
+      rep_id: rep?.id || null,
+      group_id: rep?.group_id || null,
+      stage_id: stageMap.get(String(r['단계']).trim()) || null,
+      status: String(r['진행상태'] || '').trim() || null,
+      est_amount: parseNum(r['예상매출']),
+      win_prob: parseInt0(r['성공확률(%)']),
+      product: String(r['제품'] || '').trim() || null,
+      sales_type: String(r['매출구분'] || '').trim() || null,
+      lost_reason: String(r['실패구분'] || '').trim() || null,
+      channel: String(r['인지경로'] || '').trim() || null,
+      note: String(r['비고'] || '').trim() || null,
+      start_date: parseDate(r['시작일']),
+      end_date: parseDate(r['종료일']),
+      registered_at: parseDate(r['등록일']),
+      changed_at: parseDate(r['변경일']) ? parseDate(r['변경일']) + 'T00:00:00Z' : null,
     }
   })
+
+  if (replace) { const { error: de } = await supabase.from('opportunities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업기회 삭제 실패: ' + de.message); log('기존 영업기회 전체 삭제 후 교체') }
+  const { error } = await supabase.from('opportunities').upsert(opps, { onConflict: 'external_id' })
+  if (error) throw new Error('영업기회 upsert 실패: ' + error.message)
+  log(`영업기회 ${opps.length}건 반영 완료`)
+  return { accounts: accounts.length, reps: newReps.length, opportunities: opps.length }
 }
 
-export function byGroup(rows) {
-  const m = new Map()
+// ── 계약 적재 (영업기회에 없는 건은 버림) ──────────────────
+export async function ingestContracts(file, log = () => {}, replace = false) {
+  const rows = (await readRows(file)).filter((r) => r['계약ID'] !== '')
+  if (replace && rows.length === 0) throw new Error('계약 파일에 데이터가 없어 전체 교체를 중단했습니다.')
+  log(`계약 ${rows.length}행 읽음`)
+
+  // 기준: 현재 영업기회 external_id 집합
+  const { data: opps } = await supabase.from('opportunities').select('external_id')
+  const validOpp = new Set((opps || []).map((o) => o.external_id))
+
+  const [{ data: accs }, { data: reps }] = await Promise.all([
+    supabase.from('accounts').select('id,external_id'),
+    supabase.from('reps').select('id,name'),
+  ])
+  const accMap = new Map((accs || []).map((a) => [a.external_id, a.id]))
+  const repMap = new Map((reps || []).map((r) => [r.name, r.id]))
+
+  let dropped = 0
+  const contracts = []
   for (const r of rows) {
-    const g = r.group_name || '미배정'
-    if (!m.has(g)) m.set(g, [])
-    m.get(g).push(r)
+    const oppId = parseInt0(r['영업기회ID'])
+    if (!r['영업기회ID'] || !validOpp.has(oppId)) {
+      dropped++
+      continue // 고아 계약 제외
+    }
+    contracts.push({
+      external_id: parseInt0(r['계약ID']),
+      opportunity_external_id: oppId,
+      title: String(r['계약명'] || '').trim(),
+      account_id: accMap.get(parseInt0(r['고객사ID'])) || null,
+      rep_id: repMap.get(String(r['담당자']).trim()) || null,
+      supply_amount: parseNum(r['공급가액']),
+      tax_amount: parseNum(r['세액']),
+      total_amount: parseNum(r['합계금액']),
+      product: String(r['연관제품'] || '').trim() || null,
+      line_count: parseInt0(r['회선수']),
+      contract_type: String(r['계약구분'] || '').trim() || null,
+      related_product: String(r['연관제품'] || '').trim() || null,
+      contract_date: parseDate(r['계약일']),
+      start_date: parseDate(r['시작일']),
+      end_date: parseDate(r['종료일']),
+      renewal_date: parseDate(r['갱신예정일']),
+      note: String(r['비고'] || '').trim() || null,
+    })
   }
-  return [...m.entries()]
-    .map(([name, rs]) => ({ name, rows: rs, ...kpis(rs) }))
-    .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+
+  if (contracts.length) {
+    if (replace) { const { error: de } = await supabase.from('contracts').delete().not('id', 'is', null); if (de) throw new Error('기존 계약 삭제 실패: ' + de.message); log('기존 계약 전체 삭제 후 교체') }
+    const { error } = await supabase.from('contracts').upsert(contracts, { onConflict: 'external_id' })
+    if (error) throw new Error('계약 upsert 실패: ' + error.message)
+  }
+  log(`계약 ${contracts.length}건 반영, 영업기회 없는 ${dropped}건 제외`)
+  return { contracts: contracts.length, dropped }
 }
 
-export function byAccount(rows) {
-  const m = new Map()
-  for (const r of rows) {
-    const key = r.account_name || '미상'
-    if (!m.has(key)) m.set(key, [])
-    m.get(key).push(r)
+// ── 영업활동 적재 ──────────────────────────────────────────
+export async function ingestActivities(file, log = () => {}, replace = false) {
+  const rows = (await readRows(file)).filter((r) => r['영업활동ID'] !== '')
+  if (replace && rows.length === 0) throw new Error('영업활동 파일에 데이터가 없어 전체 교체를 중단했습니다.')
+  log(`영업활동 ${rows.length}행 읽음`)
+
+  // 담당자 — 없는 이름만 추가(기존 그룹배정 보존)
+  const repNames = [...new Set(rows.map((r) => String(r['담당자']).trim()).filter(Boolean))]
+  const { data: existingReps } = await supabase.from('reps').select('id,name')
+  const have = new Set((existingReps || []).map((r) => r.name))
+  const newReps = repNames.filter((n) => !have.has(n)).map((name) => ({ name }))
+  if (newReps.length) {
+    const { error } = await supabase.from('reps').insert(newReps)
+    if (error) throw new Error('담당자 추가 실패: ' + error.message)
+    log(`담당자 ${newReps.length}명 신규 추가(그룹 미배정)`)
   }
-  return [...m.entries()]
-    .map(([name, rs]) => ({
-      name,
-      group: rs[0].group_name,
-      rep: rs[0].rep_name,
-      count: rs.length,
-      ...kpis(rs),
-    }))
-    .sort((a, b) => b.pipelineAmount + b.confirmedAmount - (a.pipelineAmount + a.confirmedAmount))
-}
+  const { data: reps } = await supabase.from('reps').select('id,name')
+  const repMap = new Map((reps || []).map((r) => [r.name, r.id]))
 
-// 담당자별 6개 KPI (절대값)
-export function repMetrics(rows, repName) {
-  const rs = rows.filter((r) => r.rep_name === repName)
-  const k = kpis(rs)
-  const accounts = new Set(rs.map((r) => r.account_name)).size
-  const avgDeal = rs.length ? rs.reduce((s, r) => s + amt(r), 0) / rs.length : 0
-  return {
-    기회수: k.total,
-    파이프라인: k.pipelineAmount,
-    확정매출: k.confirmedAmount,
-    전환율: k.winRate,
-    평균딜: avgDeal,
-    거래처수: accounts,
-    _k: k,
-    _rows: rs,
-  }
-}
-
-const AXES = ['기회수', '파이프라인', '확정매출', '전환율', '평균딜', '거래처수']
-
-// 담당자 전체 대비 정규화 (min-max, 바닥 12로 두어 꼴찌도 안 비게)
-export function hexData(rows, repNames, repName) {
-  const all = repNames.map((n) => repMetrics(rows, n))
-  const me = all.find((_, i) => repNames[i] === repName)
-  const floor = 12
-  return AXES.map((ax) => {
-    const vals = all.map((m) => m[ax])
-    const min = Math.min(...vals)
-    const max = Math.max(...vals)
-    const v = me[ax]
-    const norm = max === min ? 100 : floor + ((v - min) / (max - min)) * (100 - floor)
-    return { axis: ax, value: v, norm }
+  const acts = rows.map((r) => {
+    let type = String(r['활동분류'] || '').trim()
+    if (!type || type.startsWith('선택하세요')) type = '미분류'
+    return {
+      external_id: parseInt0(r['영업활동ID']),
+      rep_id: repMap.get(String(r['담당자']).trim()) || null,
+      account_external_id: parseInt0(r['고객사ID']) || null,
+      account_name: String(r['고객사'] || '').trim() || null,
+      opportunity_external_id: parseInt0(r['영업기회ID']) || null,
+      activity_type: type,
+      activity_purpose: String(r['활동목적'] || '').trim() || null,
+      activity_content: String(r['활동내용'] || '').trim() || null,
+      plan_content: String(r['계획내용'] || '').trim() || null,
+      start_time: String(r['활동시작시간'] || '').trim() || null,
+      end_time: String(r['활동종료시간'] || '').trim() || null,
+      opportunity_title: String(r['영업기회'] || '').trim() || null,
+      related_product: String(r['연관제품'] || '').trim() || null,
+      companion: String(r['동반'] || '').trim() || null,
+      participants: String(r['참가자'] || '').trim() || null,
+      customer_name: String(r['고객'] || '').trim() || null,
+      registered_by: String(r['등록자'] || '').trim() || null,
+      registered_at: parseDate(r['등록일']),
+      activity_date: parseDate(r['활동일시']),
+    }
   })
+
+  const filledContent = acts.filter((a) => a.activity_content).length
+  log(`활동내용 읽힘: ${filledContent}/${acts.length}건` + (filledContent === 0 ? ' ⚠ 엑셀에 활동내용 열이 없거나 이름이 다릅니다' : ''))
+
+  if (replace) { const { error: de } = await supabase.from('activities').delete().not('id', 'is', null); if (de) throw new Error('기존 영업활동 삭제 실패: ' + de.message); log('기존 영업활동 전체 삭제 후 교체') }
+  const { error } = await supabase.from('activities').upsert(acts, { onConflict: 'external_id' })
+  if (error) throw new Error('영업활동 upsert 실패: ' + error.message)
+  log(`영업활동 ${acts.length}건 반영 완료`)
+  return { activities: acts.length, reps: newReps.length }
 }
