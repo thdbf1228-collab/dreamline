@@ -105,11 +105,12 @@ function PersonTable({ owners, P, expanded, onToggle }) {
   const kidRow = (k, ownerBase) => {
     const lvl = ownerBase + (k.baseLevel || 0)
     const fw = lvl < 2 ? 700 : lvl < 3 ? 600 : 400
+    const kbg = (k.baseLevel || 0) <= 1 ? '#FDF8F6' : undefined   // 글로벌/기업(주요) 소계 행에 옅은 바탕색
     return (
       <tr key={`${ownerBase}-${k.label}-${lvl}`}>
-        <td className="px-2.5 py-1.5 text-left sticky left-0 z-[3] bg-white" style={{ paddingLeft: 12 + lvl * 15, fontWeight: fw, minWidth: 180, borderRight: '2px solid #E5E8EC' }}>{k.label}</td>
-        {P.cols.map((c, i) => <Trio key={i} o={agg(k, c.ms)} conf={c.ms.every((m) => k.months[m].conf)} />)}
-        <Trio o={agg(k, P.tot.ms)} conf={false} tot />
+        <td className="px-2.5 py-1.5 text-left sticky left-0 z-[3]" style={{ background: kbg || '#fff', paddingLeft: 12 + lvl * 15, fontWeight: fw, minWidth: 180, borderRight: '2px solid #E5E8EC' }}>{k.label}</td>
+        {P.cols.map((c, i) => <Trio key={i} o={agg(k, c.ms)} conf={c.ms.every((m) => k.months[m].conf)} rowBg={kbg} />)}
+        <Trio o={agg(k, P.tot.ms)} conf={false} tot rowBg={kbg} />
       </tr>
     )
   }
@@ -234,7 +235,7 @@ export default function Revenue() {
           </select>
         )}
         {tabBtn('pipe', '예상 파이프라인')}
-        {tabBtn('group', '그룹별', <span className="ml-0.5 rounded bg-lost/55 px-1 py-px text-[8px] font-bold text-white align-middle">NEW</span>)}
+        {tabBtn('group', '그룹별')}
         {cat === 'group' && (
           <select value={grp} onChange={(e) => setGrp(e.target.value)} className="mb-1 -ml-1 text-sm font-semibold rounded-lg px-2.5 py-1.5 border" style={{ borderColor: '#D9C7CC', background: '#FBF3F1', color: HDR }}>
             <option>1그룹</option><option>2그룹</option><option>3그룹</option>
