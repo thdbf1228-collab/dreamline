@@ -152,5 +152,50 @@ export function buildModel(plan, pipes, ebit) {
     ebitRow('엔터프라이즈 3그룹', 1, 'ebit_3'),
   ]
 
-  return { rows, ebit: ebitRows, lastConf }
+  const persons = plan.persons ? buildPersons(plan.persons, lastConf) : null
+
+  return { rows, ebit: ebitRows, lastConf, persons }
+}
+
+// ── 개인별(담당자) 실적 ──
+// 개인별 시트는 12개월 전부(예상 포함)를 자체 보유. 확정/예상은 lastConf로만 구분.
+// 엔터1,2그룹(글로벌/기업)은 NI성(1회성)을 전용회선에 합산하고 줄 삭제(= 매출현황 전체 로직 동일). 엔터3는 NI성 유지.
+const NI_RE = /NI|1회|일회/
+function pMonths(plan, actual, lastConf) {
+  const o = {}
+  for (const m of MONTHS) o[m] = { plan: round1(plan[m - 1] || 0), val: round1(actual[m - 1] || 0), conf: m <= lastConf }
+  return o
+}
+function ownerRows(owners, grp, lastConf) {
+  const mergeNI = grp === '1그룹' || grp === '2그룹'
+  return owners.map((o) => {
+    const isTot = /전체/.test(o.name || '')
+    const lines = o.lines || []
+    const top = lines[0] || { plan: [], actual: [] }
+    const kids = []
+    let lastJy = null
+    for (const k of lines.slice(1)) {
+      const lbl = String(k.label || '').trim()
+      if (mergeNI && NI_RE.test(lbl)) {
+        if (lastJy) for (let i = 0; i < 12; i++) { lastJy.p[i] += (k.plan[i] || 0); lastJy.a[i] += (k.actual[i] || 0) }
+        continue
+      }
+      const kd = { label: k.label, level: k.level, p: [...(k.plan || [])], a: [...(k.actual || [])] }
+      if (lbl === '전용회선') lastJy = kd
+      kids.push(kd)
+    }
+    return {
+      name: isTot ? '그룹 전체' : o.name,
+      key: grp + '|' + o.name,
+      isTot,
+      level: isTot ? 0 : 1,
+      months: pMonths(top.plan || [], top.actual || [], lastConf),
+      kids: kids.map((k) => ({ label: k.label, baseLevel: k.level || 0, months: pMonths(k.p, k.a, lastConf) })),
+    }
+  }).filter((o) => o.isTot || MONTHS.some((m) => o.months[m].plan || o.months[m].val))
+}
+export function buildPersons(persons, lastConf) {
+  const out = {}
+  for (const grp of ['1그룹', '2그룹', '3그룹']) out[grp] = ownerRows(persons[grp] || [], grp, lastConf)
+  return out
 }

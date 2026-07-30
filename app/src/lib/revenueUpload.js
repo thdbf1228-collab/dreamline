@@ -79,7 +79,34 @@ function parsePipeSheet(sheet, hasSub) {
   return items
 }
 
-// ── 파일 ① 매출데이터: 워크북(매출달성계획 + 1/2/3그룹) → { plan, pipes } 저장 ──
+// ── 개인별 시트 파싱 (엔터1/2/3개인별) ──
+// 담당자 블록(그룹전체 + 담당자별). 각 블록: 주요매출(C) + 상품군(글로벌/기업 D · 서비스 E).
+// 월 열: G/H=1월, I/J=2월 … AC/AD=12월 (계획/실적 2열씩 연속).
+function parsePersonSheet(sheet) {
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1')
+  const V = (r, c) => { const cell = sheet[XLSX.utils.encode_cell({ r, c })]; return cell && cell.v != null ? cell.v : null }
+  const N = (r, c) => { const v = V(r, c); if (v == null || v === '') return 0; return typeof v === 'number' ? v : (Number(String(v).replace(/,/g, '')) || 0) }
+  const monthArr = (r, base) => { const a = []; for (let m = 1; m <= 12; m++) a.push(N(r, base + (m - 1) * 2)); return a } // base: 계획=6(G), 실적=7(H)
+  const owners = []
+  let cur = null
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const b = V(r, 1)
+    const bs = b != null ? String(b).trim() : ''
+    if (bs && !bs.startsWith('#') && !bs.startsWith('■') && bs !== '구분') { cur = { name: bs, lines: [] }; owners.push(cur); continue }
+    if (!cur) continue
+    let label = null, level = null
+    const c2 = V(r, 2), c3 = V(r, 3), c4 = V(r, 4)
+    if (c2 != null && String(c2).trim()) { label = String(c2).trim(); level = 0 }
+    else if (c3 != null && String(c3).trim()) { label = String(c3).trim(); level = 1 }
+    else if (c4 != null && String(c4).trim()) { label = String(c4).trim(); level = 2 }
+    if (!label || label === '구분' || label === '네트워크영업부문' || label.includes('계획') || label.includes('실적')) continue
+    cur.lines.push({ label, level, plan: monthArr(r, 6), actual: monthArr(r, 7) })
+  }
+  return owners
+}
+const PERSON_SHEET = { '1그룹': '엔터1개인별', '2그룹': '엔터2개인별', '3그룹': '엔터3개인별' }
+
+// ── 파일 ① 매출데이터: 워크북(매출달성계획 + 1/2/3그룹 + 엔터1/2/3개인별) → { plan(+persons), pipes } 저장 ──
 export async function ingestRevenueWorkbook(file, log = () => {}) {
   const buf = await file.arrayBuffer()
   const wb = XLSX.read(buf, { type: 'array' })
@@ -96,6 +123,16 @@ export async function ingestRevenueWorkbook(file, log = () => {}) {
     pipes[name] = parsePipeSheet(sh, name !== '3그룹')
     log(`${name} 파이프라인 ${pipes[name].length}건 (반영 ${pipes[name].filter((x) => x.반영).length})`)
   }
+
+  // 개인별 3시트 (있으면 plan.persons 로 함께 저장 — Supabase 스키마 변경 불필요)
+  const persons = {}
+  for (const [grp, sn] of Object.entries(PERSON_SHEET)) {
+    const sh = wb.Sheets[sn]
+    if (!sh) { log(`⚠ '${sn}' 시트 없음 — 개인별 건너뜀`); persons[grp] = []; continue }
+    persons[grp] = parsePersonSheet(sh)
+    log(`${sn} 담당자 ${persons[grp].length}블록`)
+  }
+  plan.persons = persons
 
   const { data: u } = await supabase.auth.getUser()
   // plan/pipes 만 갱신 — ebit 컬럼은 건드리지 않음
