@@ -14,7 +14,7 @@ const NAV = [
 function SectionLabel({ children }) {
   return (
     <div className="flex items-center gap-2 px-3 pb-1.5 pt-3">
-      <span className="text-[9px] font-semibold tracking-[0.1em] text-ink-400">{children}</span>
+      <span className="text-[10px] font-bold tracking-[0.1em] text-ink-700">{children}</span>
       <span className="h-px flex-1 bg-line" />
     </div>
   )
