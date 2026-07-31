@@ -70,7 +70,7 @@ function flatItems(pipes) {
       if (!group) continue
       if (!it.반영) continue          // 확률 ≥50%만  (예상 구간 필터는 lastConf 기준으로 forecast()에서 처리)
       const one = isOne(it.성격)
-      out.push({ group, subkey: subkeyFor(group, it.상품, it.세부, one), month: it.월, amount: Number(it.증감액) || 0, one })
+      out.push({ group, subkey: subkeyFor(group, it.상품, it.세부, one), month: it.월, amount: Number(it.증감액) || 0, one, 담당: String(it.담당 || '').trim() })
     }
   }
   return out
@@ -152,50 +152,89 @@ export function buildModel(plan, pipes, ebit) {
     ebitRow('엔터프라이즈 3그룹', 1, 'ebit_3'),
   ]
 
-  const persons = plan.persons ? buildPersons(plan.persons, lastConf) : null
+  const persons = plan.persons ? buildPersons(plan.persons, lastConf, items) : null
 
   return { rows, ebit: ebitRows, lastConf, persons }
 }
 
 // ── 개인별(담당자) 실적 ──
-// 개인별 시트는 12개월 전부(예상 포함)를 자체 보유. 확정/예상은 lastConf로만 구분.
-// 엔터1,2그룹(글로벌/기업)은 NI성(1회성)을 전용회선에 합산하고 줄 삭제(= 매출현황 전체 로직 동일). 엔터3는 NI성 유지.
+// 확정월(≤lastConf)은 개인별 시트 실적. 예상월(>lastConf)은 매출현황과 동일 로직:
+//   개인 라인의 lastConf 실적 baseline + 예상파이프라인 증감액(담당·상품라인 매칭) 반영.
+//   → 개인 합 = 그룹 전체 = 매출현황(엔터12/엔터3) 예상매출과 일치.
+// 엔터1,2그룹은 NI성(1회성)을 전용회선에 합산(줄 삭제), 엔터3는 NI성 유지 (매출현황 전체 로직 동일).
 const NI_RE = /NI|1회|일회/
-function pMonths(plan, actual, lastConf) {
+// 개인별 시트 상품라인 라벨 → 파이프라인 subkey 매칭
+function leafSubkey(grp, parent, label) {
+  const lb = String(label || '')
+  if (grp !== '3그룹') return (parent || '글로벌') + (lb.includes('인터넷') ? '_인터넷' : '_전용')
+  if (lb.includes('상면')) return '엔터3_코로상면'
+  if (lb.includes('전력')) return '엔터3_코로전력'
+  if (lb.includes('인터넷')) return '엔터3_인터넷'
+  if (NI_RE.test(lb)) return '엔터3_NI'
+  return '엔터3_전용'
+}
+// 라인 월별: 확정=시트 실적, 예상=baseline(lastConf 실적)+담당·subkey 매칭 파이프라인
+function leafMonths(rep, subkey, planArr, actArr, items, lastConf) {
+  const base = actArr[lastConf - 1] || 0
   const o = {}
-  for (const m of MONTHS) o[m] = { plan: round1(plan[m - 1] || 0), val: round1(actual[m - 1] || 0), conf: m <= lastConf }
+  for (const m of MONTHS) {
+    if (m <= lastConf) { o[m] = { plan: round1(planArr[m - 1] || 0), val: round1(actArr[m - 1] || 0), conf: true }; continue }
+    let rec = 0, one = 0
+    for (const it of items) {
+      if (it.담당 !== rep || it.subkey !== subkey || it.month <= lastConf) continue
+      if (!it.one && it.month <= m) rec += it.amount
+      else if (it.one && it.month === m) one += it.amount
+    }
+    o[m] = { plan: round1(planArr[m - 1] || 0), val: round1(base + rec + one), conf: false }
+  }
   return o
 }
-function ownerRows(owners, grp, lastConf) {
-  const mergeNI = grp === '1그룹' || grp === '2그룹'
-  return owners.map((o) => {
-    const isTot = /전체/.test(o.name || '')
-    const lines = o.lines || []
-    const top = lines[0] || { plan: [], actual: [] }
-    const kids = []
-    let lastJy = null
-    for (const k of lines.slice(1)) {
-      const lbl = String(k.label || '').trim()
-      if (mergeNI && NI_RE.test(lbl)) {
-        if (lastJy) for (let i = 0; i < 12; i++) { lastJy.p[i] += (k.plan[i] || 0); lastJy.a[i] += (k.actual[i] || 0) }
-        continue
-      }
-      const kd = { label: k.label, level: k.level, p: [...(k.plan || [])], a: [...(k.actual || [])] }
-      if (lbl === '전용회선') lastJy = kd
-      kids.push(kd)
-    }
-    return {
-      name: isTot ? '그룹 전체' : o.name,
-      key: grp + '|' + o.name,
-      isTot,
-      level: isTot ? 0 : 1,
-      months: pMonths(top.plan || [], top.actual || [], lastConf),
-      kids: kids.map((k) => ({ label: k.label, baseLevel: k.level || 0, months: pMonths(k.p, k.a, lastConf) })),
-    }
-  }).filter((o) => o.isTot || MONTHS.some((m) => o.months[m].plan || o.months[m].val))
+function sumMonths(list, lastConf) {
+  const o = {}
+  for (const m of MONTHS) {
+    let p = 0, v = 0
+    for (const mm of list) { p += mm[m].plan; v += mm[m].val }
+    o[m] = { plan: round1(p), val: round1(v), conf: m <= lastConf }
+  }
+  return o
 }
-export function buildPersons(persons, lastConf) {
+function buildPersonBlock(o, grp, lastConf, items) {
+  const mergeNI = grp === '1그룹' || grp === '2그룹'
+  const rep = o.name
+  const kids = []       // 표시 순서: (글로벌/기업 소계) + 상품라인
+  let parent = null
+  for (const ln of (o.lines || []).slice(1)) {
+    const lbl = String(ln.label || '').trim()
+    if (mergeNI && lbl.includes('(주요)')) { parent = lbl.includes('글로벌') ? '글로벌' : '기업'; kids.push({ label: ln.label, baseLevel: ln.level || 1, sub: true }); continue }
+    if (mergeNI && NI_RE.test(lbl)) {   // NI → 직전 전용회선 라인에 합산
+      for (let j = kids.length - 1; j >= 0; j--) { if (!kids[j].sub && String(kids[j].label).trim() === '전용회선') { for (let i = 0; i < 12; i++) { kids[j]._p[i] += (ln.plan[i] || 0); kids[j]._a[i] += (ln.actual[i] || 0) } break } }
+      continue
+    }
+    kids.push({ label: ln.label, baseLevel: ln.level || (grp === '3그룹' ? 1 : 2), subkey: leafSubkey(grp, parent, lbl), _p: [...(ln.plan || [])], _a: [...(ln.actual || [])] })
+  }
+  for (const k of kids) if (!k.sub) k.months = leafMonths(rep, k.subkey, k._p, k._a, items, lastConf)
+  for (let i = 0; i < kids.length; i++) {
+    if (!kids[i].sub) continue
+    const leaves = []
+    for (let j = i + 1; j < kids.length && !kids[j].sub; j++) leaves.push(kids[j].months)
+    kids[i].months = sumMonths(leaves, lastConf)
+  }
+  const total = sumMonths(kids.filter((k) => !k.sub).map((k) => k.months), lastConf)
+  return { name: rep, key: grp + '|' + rep, isTot: false, level: 1, months: total, kids: kids.map((k) => ({ label: k.label, baseLevel: k.baseLevel, months: k.months })) }
+}
+function ownerRows(owners, grp, lastConf, items) {
+  const built = (owners || []).filter((o) => !/전체/.test(o.name || '')).map((o) => buildPersonBlock(o, grp, lastConf, items))
+    .filter((p) => MONTHS.some((m) => p.months[m].plan || p.months[m].val))
+  if (!built.length) return []
+  const totalOwner = {
+    name: '그룹 전체', key: grp + '|전체', isTot: true, level: 0,
+    months: sumMonths(built.map((p) => p.months), lastConf),
+    kids: built[0].kids.map((_, idx) => ({ label: built[0].kids[idx].label, baseLevel: built[0].kids[idx].baseLevel, months: sumMonths(built.map((p) => p.kids[idx].months), lastConf) })),
+  }
+  return [totalOwner, ...built]
+}
+export function buildPersons(persons, lastConf, items = []) {
   const out = {}
-  for (const grp of ['1그룹', '2그룹', '3그룹']) out[grp] = ownerRows(persons[grp] || [], grp, lastConf)
+  for (const grp of ['1그룹', '2그룹', '3그룹']) out[grp] = ownerRows(persons[grp] || [], grp, lastConf, items)
   return out
 }
