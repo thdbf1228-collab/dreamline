@@ -9,6 +9,7 @@ const FC = '#98A2B3', FCBG = '#F3F5F8', BRAND = '#1D4ED8', LOST = '#E02424'
 const CUM_BORDER = '#E3CFC9', CUM_HEADBG = '#F7EAE6', CUM_CELLBG = '#FDF7F5'
 const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12]
 const comma = (v) => Math.round(Number(v) || 0).toLocaleString('ko-KR')
+const fmtDate = (s) => { if (!s) return ''; const d = new Date(s); return isNaN(d) ? '' : `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}` }
 const comma1 = (v) => { const n = Math.round((Number(v) || 0) * 10) / 10; return n.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) }
 const rate = (p, a) => { const r = p ? (a / p) * 100 : 0; return { r, c: r >= 100 ? BRAND : (p ? LOST : FC) } }
 
@@ -145,6 +146,7 @@ function PersonTable({ owners, P, expanded, onToggle }) {
 function PipeTable({ items, grp }) {
   const all = grp === '전체'
   const has = grp !== '3그룹'   // 세부 열 (3그룹만 없음, 전체는 표시)
+  const total = items.reduce((s, x) => s + (Number(x.증감액) || 0), 0)
   return (
     <table className="text-xs w-full border-collapse">
       <thead>
@@ -168,6 +170,13 @@ function PipeTable({ items, grp }) {
           )
         })}
       </tbody>
+      <tfoot>
+        <tr className="[&_td]:px-2.5 [&_td]:py-2.5 [&_td]:border-t-2 [&_td]:border-line sticky bottom-0" style={{ background: '#FBF3F1' }}>
+          <td colSpan={8 + (all ? 1 : 0) + (has ? 1 : 0)} className="text-left font-bold" style={{ color: HDR }}>합계 (표시 {items.length}건)</td>
+          <td className="text-right tabular-nums font-extrabold" style={{ color: total >= 0 ? BRAND : LOST }}>{total >= 0 ? '+' : ''}{comma1(total)}</td>
+          <td colSpan={2} />
+        </tr>
+      </tfoot>
     </table>
   )
 }
@@ -175,7 +184,7 @@ function PipeTable({ items, grp }) {
 const PERIOD_OPTS = [{ v: 'q', label: '분기' }, { v: 'h1', label: '상반기' }, { v: 'h2', label: '하반기' }, { v: 'cum', label: '확정누계' }]
 
 export default function Revenue() {
-  const { loading, error, model, pipes } = useRevenue()
+  const { loading, error, model, pipes, updatedAt } = useRevenue()
   const [cat, setCat] = useState('all')            // all | period | pipe | group
   const [pmode, setPmode] = useState('q')          // 기간별 세부: q | h1 | h2 | cum
   const [expanded, setExpanded] = useState({})
@@ -317,7 +326,7 @@ export default function Revenue() {
           <div className="bg-paper border border-line rounded-xl shadow-card overflow-hidden">
             <div className="px-4 py-3 flex items-center justify-between" style={{ background: HDR }}>
               <span className="text-[15px] font-bold text-white">{pgrp} 파이프라인</span>
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,.66)' }}>표시 {pview.length}건</span>
+              <span className="text-xs" style={{ color: 'rgba(255,255,255,.66)' }}>표시 {pview.length}건{updatedAt && ` · 업데이트 ${fmtDate(updatedAt)}`}</span>
             </div>
             <div className="overflow-auto" style={{ maxHeight: 620 }}><PipeTable items={pview} grp={pgrp} /></div>
           </div>
