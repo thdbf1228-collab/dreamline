@@ -158,7 +158,7 @@ function PipeTable({ items, grp }) {
       </thead>
       <tbody>
         {items.map((x, i) => {
-          const off = !x.반영, up = x.side === '증가'
+          const off = !x.반영, up = x.side === '증가', one = /1회|일회/.test(x.성격 || '')
           return (
             <tr key={i} className="[&_td]:px-2.5 [&_td]:py-2 [&_td]:border-b [&_td]:border-[#EEF1F5] [&_td]:align-top" style={off ? { color: FC, background: '#FAFAFB' } : undefined}>
               <td><span className="text-[10px] font-bold rounded-lg px-1.5 py-px" style={{ background: off ? '#F1F2F4' : '#E7EDFB', color: off ? FC : BRAND }}>{off ? '미반영' : '반영'}</span></td>
@@ -166,7 +166,7 @@ function PipeTable({ items, grp }) {
               <td className="tabular-nums">{x.월}월</td><td>{x.상품}</td>{has && <td>{x.세부}</td>}<td>{x.구분}</td><td>{x.담당}</td><td>{x.고객사}</td>
               <td className="whitespace-normal text-ink-700" style={{ maxWidth: 280 }}>{x.내용}</td>
               <td className="text-right tabular-nums font-bold" style={{ color: off ? FC : (up ? BRAND : LOST) }}>{up ? '+' : ''}{comma1(x.증감액)}</td>
-              <td><span className="text-[10px] font-bold rounded-lg px-1.5 py-px" style={{ background: up ? '#E7EFFB' : '#FDEAEA', color: up ? BRAND : LOST }}>{x.성격}</span></td>
+              <td><span className="text-[10px] font-bold rounded-lg px-1.5 py-px" style={{ background: one ? '#FCE7CE' : '#E7EFFB', color: one ? '#B4530A' : BRAND }}>{x.성격}</span></td>
               <td className="text-right tabular-nums font-bold" style={{ color: off ? FC : '#334155' }}>{x.확률}%</td>
             </tr>
           )
@@ -174,7 +174,7 @@ function PipeTable({ items, grp }) {
       </tbody>
       <tfoot>
         <tr className="[&_td]:px-2.5 [&_td]:py-2.5 [&_td]:border-t-2 [&_td]:border-line sticky bottom-0" style={{ background: '#FBF3F1' }}>
-          <td colSpan={8 + (all ? 1 : 0) + (has ? 1 : 0)} className="text-left font-bold" style={{ color: HDR }}>합계 (표시 {items.length}건)</td>
+          <td colSpan={7 + (all ? 1 : 0) + (has ? 1 : 0)} className="text-left font-bold" style={{ color: HDR }}>합계 (표시 {items.length}건)</td>
           <td className="text-right tabular-nums font-extrabold" style={{ color: total >= 0 ? BRAND : LOST }}>{total >= 0 ? '+' : ''}{comma1(total)}</td>
           <td colSpan={2} />
         </tr>
