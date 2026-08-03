@@ -3,8 +3,9 @@ import { useRevenue } from '../data/useRevenue'
 
 // ── 색/스타일 상수 (로즈 테마) ──
 const HDR = '#6E4A54'
-const TINT = { '주요매출': '#EFDBD5', '엔터프라이즈 1,2그룹': '#F7EAE6', '엔터프라이즈 3그룹': '#F7EAE6', '글로벌': '#FDF8F6', '기업': '#FDF8F6' }
-const TINT_EBIT = { '합계': '#EFDBD5', '엔터프라이즈 1,2그룹': '#FDF8F6', '엔터프라이즈 3그룹': '#FDF8F6' }
+const TINT = { '주요매출': '#E3C0B7', '엔터프라이즈 1,2그룹': '#F7EAE6', '엔터프라이즈 3그룹': '#F7EAE6', '글로벌': '#FDF8F6', '기업': '#FDF8F6' }
+const TINT_EBIT = { '합계': '#E3C0B7', '엔터프라이즈 1,2그룹': '#FDF8F6', '엔터프라이즈 3그룹': '#FDF8F6' }
+const MAIN_PLANC = '#7D5B52'  // 최상위 총계행(주요매출/합계) 계획 숫자색 (진한 바탕 대비)
 const FC = '#98A2B3', FCBG = '#F3F5F8', BRAND = '#1D4ED8', LOST = '#E02424'
 const CUM_BORDER = '#E3CFC9', CUM_HEADBG = '#F7EAE6', CUM_CELLBG = '#FDF7F5'
 const MONTHS = [1,2,3,4,5,6,7,8,9,10,11,12]
@@ -26,7 +27,7 @@ const agg = (row, ms) => ms.reduce((o, m) => ({ plan: o.plan + row.months[m].pla
 const aggCum = (row, lastConf) => agg(row, MONTHS.filter((m) => m <= lastConf))
 
 // 3칸(계획/실적/달성). box=확정누계 박스, noBg=예상 회색 억제(연간칸)
-function Trio({ o, conf, tot, rowBg, box, noBg }) {
+function Trio({ o, conf, tot, rowBg, box, noBg, planColor }) {
   const ri = rate(o.plan, o.val)
   const bg = box ? CUM_CELLBG : (rowBg || (conf || noBg ? undefined : FCBG))
   const bs = bg ? { background: bg } : undefined
@@ -35,7 +36,7 @@ function Trio({ o, conf, tot, rowBg, box, noBg }) {
   const rb = box ? { borderRight: `2px solid ${CUM_BORDER}` } : undefined
   return (
     <>
-      <td className="px-2.5 py-1.5 text-right tabular-nums text-ink-400" style={{ ...lb, ...bs }}>{comma(o.plan)}</td>
+      <td className="px-2.5 py-1.5 text-right tabular-nums" style={{ ...lb, ...bs, color: planColor || '#94A3B8' }}>{comma(o.plan)}</td>
       <td className="px-2.5 py-1.5 text-right tabular-nums font-bold" style={{ ...bs, color: vcol }}>{comma(o.val)}</td>
       <td className="px-2.5 py-1.5 text-right tabular-nums font-bold" style={{ ...bs, ...rb, color: ri.c }}>{o.plan ? `${ri.r.toFixed(0)}%` : '–'}</td>
     </>
@@ -79,6 +80,7 @@ function RevTable({ rows, P, expanded, onToggle, tint = TINT }) {
     const hasKid = row.kids && row.kids.length
     const exp = expanded[row.label]
     const fw = (row.level || 0) < 2 ? 700 : (row.level || 0) < 3 ? 600 : 400
+    const mainPlan = (!cum && (row.level || 0) === 0) ? MAIN_PLANC : undefined   // 최상위 총계행 계획 숫자색
     return (
       <Fragment key={row.label}>
         <tr>
@@ -86,8 +88,8 @@ function RevTable({ rows, P, expanded, onToggle, tint = TINT }) {
             {hasKid && <span onClick={() => onToggle(row.label)} className="cursor-pointer select-none text-ink-500 inline-block w-3.5 text-center mr-0.5">{exp ? '▾' : '▸'}</span>}
             {row.label}
           </td>
-          {P.cols.map((c, i) => <Trio key={i} o={agg(row, c.ms)} conf={c.conf} rowBg={bg} box={cum && c.cc} />)}
-          <Trio o={agg(row, P.tot.ms)} conf={false} tot rowBg={bg} noBg={cum} />
+          {P.cols.map((c, i) => <Trio key={i} o={agg(row, c.ms)} conf={c.conf} rowBg={bg} box={cum && c.cc} planColor={mainPlan} />)}
+          <Trio o={agg(row, P.tot.ms)} conf={false} tot rowBg={bg} noBg={cum} planColor={mainPlan} />
         </tr>
         {hasKid && exp && row.kids.map((k) => renderRow(k))}
       </Fragment>
@@ -148,7 +150,7 @@ function PipeTable({ items, grp }) {
   const has = grp !== '3그룹'   // 세부 열 (3그룹만 없음, 전체는 표시)
   const total = items.reduce((s, x) => s + (Number(x.증감액) || 0), 0)
   return (
-    <table className="text-xs w-full border-collapse">
+    <table className="text-[13px] w-full border-collapse">
       <thead>
         <tr className="[&_th]:sticky [&_th]:top-0 [&_th]:bg-[#F4F1F2] [&_th]:text-ink-500 [&_th]:font-semibold [&_th]:px-2.5 [&_th]:py-2 [&_th]:border-b [&_th]:border-line [&_th]:text-left [&_th]:whitespace-nowrap z-[2]">
           <th>반영</th>{all && <th>그룹</th>}<th>월</th><th>상품</th>{has && <th>세부</th>}<th>구분</th><th>담당</th><th>고객사</th><th>내용</th><th className="!text-right">증감액</th><th>성격</th><th className="!text-right">확률</th>
